@@ -585,7 +585,7 @@ class McpAuthorizationTest extends TestCase
             'guard' => 'web',
         ]);
         DB::table('hexa_role_user')->insert(['user_id' => $reviewer->id, 'role_id' => $reviewerRole->getKey()]);
-        $approved = app(McpApprovalService::class)->approve($approval, $reviewer, 'Approved in Management-OS.');
+        $approved = app(McpApprovalService::class)->approve($approval, $reviewer, 'Approved in os-edventure-ro.');
         $this->assertSame(McpApproval::STATUS_APPROVED, $approved->status);
         $approval = $approved;
 

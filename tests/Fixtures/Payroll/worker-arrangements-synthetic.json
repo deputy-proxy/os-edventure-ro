@@ -1,6 +1,6 @@
 {
   "fixture_metadata": {
-    "name": "management-os-worker-arrangements-demo",
+    "name": "os-edventure-ro-worker-arrangements-demo",
     "synthetic": true,
     "purpose": "Arrangement inventory examples and classification boundaries only; not a real worker roster, legal classification, or production seed data",
     "review_status": "example-only-not-owner-reviewed"

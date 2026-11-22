@@ -1,7 +1,7 @@
 # Financial Rules Reviewer Packet
 
-**Repository:** deputy-proxy/Management-OS
-**Primary issue:** [#304 - Approve financial rules and monetary semantics](https://github.com/deputy-proxy/Management-OS/issues/304)
+**Repository:** deputy-proxy/os-edventure-ro
+**Primary issue:** [#304 - Approve financial rules and monetary semantics](https://github.com/deputy-proxy/os-edventure-ro/issues/304)
 **Policy register:** [Financial Rules Decision Register](financial-rules-decision-register.md)
 **Readiness matrix:** [Financial Rules Implementation Readiness](financial-rules-implementation-readiness.md)
 **Purpose:** Obtain documented, scoped specialist review of policy assumptions that cannot be validated by company-owner approval or software tests alone.

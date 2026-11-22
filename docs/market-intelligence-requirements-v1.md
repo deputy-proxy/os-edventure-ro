@@ -1,7 +1,7 @@
 # Market intelligence objectives and data requirements v1
 
 **Status:** Engineering requirements proposal; business-owner approval is pending  
-**Roadmap:** [Issue #359](https://github.com/deputy-proxy/Management-OS/issues/359)
+**Roadmap:** [Issue #359](https://github.com/deputy-proxy/os-edventure-ro/issues/359)
 
 ## Objectives and decisions supported
 

@@ -2,7 +2,7 @@
 
 Last reconciled with the repository implementation: 2026-11-22.
 
-This is the operational entry point for the Management-OS MCP integration. It describes committed application behavior and the currently documented ChatGPT connection flow. It is not evidence that the production endpoint, reverse proxy, or a live ChatGPT workspace has passed end-to-end acceptance.
+This is the operational entry point for the os-edventure-ro MCP integration. It describes committed application behavior and the currently documented ChatGPT connection flow. It is not evidence that the production endpoint, reverse proxy, or a live ChatGPT workspace has passed end-to-end acceptance.
 
 ## 1. Current capability and safety boundary
 
@@ -15,7 +15,7 @@ The server also exposes five permission-aware read-only resources and five promp
 
 Every tool requires its dedicated OAuth scope and the configured AI principal. Dynamic client registration advertises and allows the complete scope set from the permission matrix so ChatGPT can request the scopes needed by discovered tools; the issued token must still contain the individual tool scope. Required/optional HexaLite permissions, record scopes, and nested output-field allowlists are enforced server-side. The AI principal must never receive Owner, superadmin, or blanket administrator privileges.
 
-The six task/CRM operations are not direct writes from the initial request. A request creates a pending approval containing an immutable encrypted payload. A separate eligible human reviewer must approve the exact payload in the Management-OS panel. The execution tool accepts only the approval ID and rechecks authorization before calling the existing domain action. ChatGPT's conversational confirmation is not a substitute for this approval.
+The six task/CRM operations are not direct writes from the initial request. A request creates a pending approval containing an immutable encrypted payload. A separate eligible human reviewer must approve the exact payload in the os-edventure-ro panel. The execution tool accepts only the approval ID and rechecks authorization before calling the existing domain action. ChatGPT's conversational confirmation is not a substitute for this approval.
 
 No MCP write is available for payroll, invoices, financial corrections/reversals, lead conversion, or user/role administration. HR and academic outputs remain aggregate-only. Production enablement and any expansion of sensitive fields remain subject to the field, audience, and retention review recorded in [issue #539](https://github.com/deputy-proxy/os-edventure-ro/issues/539).
 
@@ -42,7 +42,7 @@ The source of truth is **config/mcp.php** and **.env.example**.
 | **MCP_APPROVAL_TTL_MINUTES** | 15 | Pending/approved operation lifetime. |
 | **MCP_APPROVAL_MAX_PAYLOAD_BYTES** | 65536 | Maximum encoded approval payload size (64 KiB). |
 | **MCP_EXECUTION_STALE_MINUTES** | 5 | Age after which interrupted execution is marked uncertain. |
-| **MCP_SERVER_NAME** | Management-OS | MCP server identity shown to clients. |
+| **MCP_SERVER_NAME** | os-edventure-ro | MCP server identity shown to clients. |
 | **MCP_SERVER_VERSION** | 0.1.0 | MCP server version metadata. |
 | **APP_DEBUG** | `false` in .env.example | Must remain `false` in production so exception traces and filesystem paths are not disclosed. |
 
@@ -103,12 +103,12 @@ Current Help Center flow:
 
 The Help Center also documents a legacy Apps flow. Follow the current workspace UI rather than assuming legacy navigation remains present. Custom MCP connections are web-only.
 
-During OAuth, an authenticated Management-OS user completes consent. The Passport token subject is the dedicated AI Assistant principal, not the human who approved the connection. The default redirect allowlist contains https://chatgpt.com; add another callback origin only if OpenAI documents it for the selected workspace flow and it has been reviewed. Never use a wildcard.
+During OAuth, an authenticated os-edventure-ro user completes consent. The Passport token subject is the dedicated AI Assistant principal, not the human who approved the connection. The default redirect allowlist contains https://chatgpt.com; add another callback origin only if OpenAI documents it for the selected workspace flow and it has been reviewed. Never use a wildcard.
 OpenAI's connection guide requires an OAuth provider that issues refresh tokens and recommends that OpenID Connect discovery advertise offline_access (or an equivalent refresh capability). This application currently advertises authorization_code and refresh_token in grant_types_supported, but its scopes_supported list does not include offline_access. The refresh-token grant is implemented and tested locally, but whether ChatGPT accepts that metadata as the equivalent capability has not been verified. Treat this as an explicit interoperability gate: inspect the live discovery metadata and complete a real workspace OAuth test; if ChatGPT requires offline_access, track and implement that scope before claiming the connection is supported.
 
-Test a low-risk read tool first and confirm output is limited to the AI principal's permissions. A successful tool scan does not prove every tool is authorized or production-ready. Test task/CRM writes only in a controlled environment with a designated independent human reviewer and the Management-OS approval workflow enabled.
+Test a low-risk read tool first and confirm output is limited to the AI principal's permissions. A successful tool scan does not prove every tool is authorized or production-ready. Test task/CRM writes only in a controlled environment with a designated independent human reviewer and the os-edventure-ro approval workflow enabled.
 
-ChatGPT may ask users to confirm write actions, but that UI confirmation does not approve the Management-OS operation. A human with mcp_approval.approve must review the pending operation in the authenticated Management-OS UI, distinct from the AI principal and, when known, the human initiator.
+ChatGPT may ask users to confirm write actions, but that UI confirmation does not approve the os-edventure-ro operation. A human with mcp_approval.approve must review the pending operation in the authenticated os-edventure-ro UI, distinct from the AI principal and, when known, the human initiator.
 
 Workspace apps use a reviewed snapshot of discovered tool definitions. When server schemas or metadata change, an administrator must refresh/review the tool list and publish the updated version as required by the workspace UI. Server-side changes do not automatically become enabled workspace actions.
 
@@ -156,7 +156,7 @@ Do not infer missing data as zero, combine unlike currencies or units, widen rec
 
 ## 7. Human approvals and execution audit
 
-The Management-OS Filament panel exposes:
+The os-edventure-ro Filament panel exposes:
 
 - MCP Approvals: /admin/mcp-approvals, permissions mcp_approval.index to view and mcp_approval.approve to approve/reject with a rationale;
 - MCP Execution Audit: /admin/mcp-execution-audits, permission mcp_execution_audit.index to inspect audit history.
@@ -210,7 +210,7 @@ For MCP-specific incidents:
 
 1. Contain access by removing the AI principal's mapped domain permission or, when token compromise is suspected, revoking its Passport tokens with **php artisan mcp:revoke-principal-tokens**.
 2. Search the MCP execution audit by request ID, approval ID, OAuth client ID, principal, tool/version, target, idempotency key, and time window.
-3. Verify approval status, payload hash, reviewer identity/rationale, and domain-event reference. Retrieve decrypted approval data only through the protected Management-OS workflow when strictly necessary.
+3. Verify approval status, payload hash, reviewer identity/rationale, and domain-event reference. Retrieve decrypted approval data only through the protected os-edventure-ro workflow when strictly necessary.
 4. For execution_uncertain, reconcile the underlying domain state and event history before any manual action. Do not automatically retry.
 5. Preserve approval/audit records, record the incident decision in the relevant restricted change/incident record, and restore permissions or reauthorize only after review.
 

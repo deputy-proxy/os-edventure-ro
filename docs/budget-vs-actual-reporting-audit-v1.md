@@ -2,7 +2,7 @@
 
 **Status:** Engineering scope audit; comparison contract depends on versioned budgets and approved actuals  
 **Date:** 2026-10-27  
-**Roadmap:** [Issue #357](https://github.com/deputy-proxy/Management-OS/issues/357)
+**Roadmap:** [Issue #357](https://github.com/deputy-proxy/os-edventure-ro/issues/357)
 
 ## Existing capability
 

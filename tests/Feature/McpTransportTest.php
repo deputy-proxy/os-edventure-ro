@@ -44,7 +44,7 @@ class McpTransportTest extends TestCase
         parent::tearDown();
     }
 
-    public function test_streamable_http_initializes_a_session_and_advertises_management_os(): void
+    public function test_streamable_http_initializes_a_session_and_advertises_os_edventure_ro(): void
     {
         $response = $this->mcpPost([
             'jsonrpc' => '2.0',
@@ -62,7 +62,7 @@ class McpTransportTest extends TestCase
 
         $response->assertOk()
             ->assertJsonPath('jsonrpc', '2.0')
-            ->assertJsonPath('result.serverInfo.name', 'Management-OS')
+            ->assertJsonPath('result.serverInfo.name', 'os-edventure-ro')
             ->assertJsonPath('result.serverInfo.version', '0.1.0');
 
         $this->assertNotEmpty($response->headers->get('Mcp-Session-Id'));

@@ -34,7 +34,7 @@ class AppServiceProvider extends ServiceProvider
         Passport::useAccessTokenEntity(McpAccessToken::class);
         Passport::authorizationView('mcp.authorize');
         Passport::tokensCan([
-            'mcp:use' => 'Access the Management-OS MCP server.',
+            'mcp:use' => 'Access the os-edventure-ro MCP server.',
             ...app(McpToolPermissionRegistry::class)->passportScopes(),
         ]);
         Passport::tokensExpireIn(now()->addMinutes((int) config('mcp.access_token_ttl_minutes', 60)));
