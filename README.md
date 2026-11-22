@@ -1,7 +1,7 @@
-# EdVenture Management OS
+# EdVenture os-edventure-ro
 
 
-Management-OS is a Laravel monolith for EdVenture's administrative, finance, academic, portfolio, and operations workflows. Laravel/Eloquent owns application state and business rules; Filament provides the internal management UI. The project is organized into domain areas, not separately deployed services.
+os-edventure-ro is a Laravel monolith for EdVenture's administrative, finance, academic, portfolio, and operations workflows. Laravel/Eloquent owns application state and business rules; Filament provides the internal management UI. The project is organized into domain areas, not separately deployed services.
 
 ## Supported runtime
 
@@ -25,7 +25,7 @@ Management-OS is a Laravel monolith for EdVenture's administrative, finance, aca
 | Payroll policy configuration | PayrollPolicy, PayrollPolicyService, PayrollPolicyResource | Versioned, effective-dated policy configuration, explicit parameter gaps, immutable activated versions, and policy-defined rounding. See [payroll policy configuration](docs/payroll-policy-configuration.md). |
 | Budget planning | `Budget`, `BudgetVersion`, `BudgetLineItem`, `BudgetVersionService`, `BudgetResource` | Separate currency-safe budget records with inclusive periods, explicit dimensions, line items, draft/submitted/approved/retired versions, overlap checks, permissioned lifecycle transitions, and append-only audit snapshots. Legacy project/campaign budget fields remain untouched. See [the versioned budget workflow](docs/budget-version-workflow.md). |
 | Payroll validation exceptions | PayrollValidationService, PayrollException, PayrollExceptionResource | Persisted blocking exceptions and warnings, safe remediation guidance, append-only resolution history, and payslip close guards. See [payroll validation exceptions](docs/payroll-validation-exceptions.md). |
-| Academic lifecycle | `Student`, `Group`, `StudentGroupMembership`, `Session`, `SessionAttendance`, `TestSubmission`, `ProgressUpdate` | Management-OS owns effective-dated student-group membership; session rosters, attendance, optional assessment/progress attribution, and session lifecycle use documented rules. Historical attendance exceptions require deliberate reconciliation. See [academic lifecycle and membership](docs/academic-lifecycle.md). |
+| Academic lifecycle | `Student`, `Group`, `StudentGroupMembership`, `Session`, `SessionAttendance`, `TestSubmission`, `ProgressUpdate` | os-edventure-ro owns effective-dated student-group membership; session rosters, attendance, optional assessment/progress attribution, and session lifecycle use documented rules. Historical attendance exceptions require deliberate reconciliation. See [academic lifecycle and membership](docs/academic-lifecycle.md). |
 | Scheduling | `Session`, `SessionAssistance`, `SessionAttendance`, `CalendarEventService`, `routes/console.php` | Unified scheduled sessions and related activity. `Session::session_type` distinguishes group and individual sessions. |
 | Background/operational commands | `app/Console/Commands`, `app/Jobs` | Explicit backfills, scheduled payslip generation, and queued notification workflows. |
 | Public views | `resources/views`, `PublicSubmissionController` | Homepage, shared navigation/footer components, and public enquiry, competition-entry, newsletter, and review forms. Legacy page routes without a view intentionally return 404 until implemented; see [public route availability](docs/public-site-routes.md). |

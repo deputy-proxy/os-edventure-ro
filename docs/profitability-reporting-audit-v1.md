@@ -2,7 +2,7 @@
 
 **Status:** Engineering scope audit; profitability calculation remains gated on approved inputs  
 **Date:** 2026-10-27  
-**Roadmap:** [Issue #355](https://github.com/deputy-proxy/Management-OS/issues/355)
+**Roadmap:** [Issue #355](https://github.com/deputy-proxy/os-edventure-ro/issues/355)
 
 ## Existing capability
 

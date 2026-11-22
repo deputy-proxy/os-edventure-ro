@@ -2,7 +2,7 @@
 
 ## System-of-record rule
 
-Management-OS is the canonical system of record for student-to-group membership and academic participation. No external roster is required to define membership. Future imports/integrations may propose or synchronize changes, but canonical membership changes must be validated and persisted here. Do not infer enrollment dates from attendance.
+os-edventure-ro is the canonical system of record for student-to-group membership and academic participation. No external roster is required to define membership. Future imports/integrations may propose or synchronize changes, but canonical membership changes must be validated and persisted here. Do not infer enrollment dates from attendance.
 
 ## Relationship matrix
 

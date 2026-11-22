@@ -1,6 +1,6 @@
 # Application actions and domain events
 
-Management-OS remains a Laravel modular monolith. Use application actions/services for reusable business workflows; do not put business invariants in Filament components, controllers, queue jobs, or MCP adapters.
+os-edventure-ro remains a Laravel modular monolith. Use application actions/services for reusable business workflows; do not put business invariants in Filament components, controllers, queue jobs, or MCP adapters.
 
 ## Application-action convention
 

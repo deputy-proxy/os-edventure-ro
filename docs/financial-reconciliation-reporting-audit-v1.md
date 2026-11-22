@@ -2,7 +2,7 @@
 
 **Status:** Engineering scope audit; not a settlement or accounting approval  
 **Date:** 2026-10-27  
-**Roadmap:** [Issue #352](https://github.com/deputy-proxy/Management-OS/issues/352)
+**Roadmap:** [Issue #352](https://github.com/deputy-proxy/os-edventure-ro/issues/352)
 
 ## Existing capability
 

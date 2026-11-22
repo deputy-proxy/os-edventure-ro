@@ -1,6 +1,6 @@
 # Versioned budget workflow
 
-Management-OS stores budgets in a dedicated ledger. The legacy integer `projects.budget` and `paid_campaigns.budget` fields remain unchanged and are not imported, inferred, or treated as canonical budget values.
+os-edventure-ro stores budgets in a dedicated ledger. The legacy integer `projects.budget` and `paid_campaigns.budget` fields remain unchanged and are not imported, inferred, or treated as canonical budget values.
 
 ## Data contract
 

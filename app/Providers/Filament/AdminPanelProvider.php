@@ -54,7 +54,7 @@ class AdminPanelProvider extends PanelProvider
             ->path('admin')
             ->viteTheme('resources/css/filament/admin/theme.css')
             ->login()
-            ->brandName('Management OS')
+            ->brandName('os-edventure-ro')
             ->sidebarWidth('18rem')
             ->favicon(asset('images/logo.png'))
             ->brandLogo(fn () => view('filament.admin.logo'))    

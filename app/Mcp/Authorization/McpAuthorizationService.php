@@ -50,7 +50,7 @@ final class McpAuthorizationService
 
         foreach ($permission->domainPermissions as $domainPermission) {
             if (! $this->hasDomainPermissionFromRoles($roles, $domainPermission)) {
-                throw new AuthorizationException('The required Management-OS domain permission is not granted.');
+                throw new AuthorizationException('The required os-edventure-ro domain permission is not granted.');
             }
         }
 
@@ -86,7 +86,7 @@ final class McpAuthorizationService
         $this->authorizeTool($principal, $permission);
 
         if (! $this->recordScope($permission)->allows($principal, $record)) {
-            throw new AuthorizationException('The requested Management-OS record is not accessible.');
+            throw new AuthorizationException('The requested os-edventure-ro record is not accessible.');
         }
     }
 

@@ -1,7 +1,7 @@
 # Public market source and provider evaluation v1
 
 **Status:** Source evaluation based on public documentation reviewed on 2026-10-28. Production access, account eligibility, contractual permissions, and cost quotes have not been verified for this organization.  
-**Roadmap:** [Issue #360](https://github.com/deputy-proxy/Management-OS/issues/360)
+**Roadmap:** [Issue #360](https://github.com/deputy-proxy/os-edventure-ro/issues/360)
 
 ## Decision summary
 

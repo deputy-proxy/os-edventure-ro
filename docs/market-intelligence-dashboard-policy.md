@@ -2,7 +2,7 @@
 
 **Version:** 1.0  
 **Effective date:** 2026-10-27  
-**Scope:** Stored market-trend observations, competitor-offer observations, and imported Google Ads campaign-day metrics shown in Management-OS.
+**Scope:** Stored market-trend observations, competitor-offer observations, and imported Google Ads campaign-day metrics shown in os-edventure-ro.
 
 ## Purpose and decision boundary
 
