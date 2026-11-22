@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Mcp\Authorization\McpToolPermissionRegistry;
 use App\Mcp\Authorization\Scopes\McpGlobalRecordScope;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -101,7 +102,7 @@ class McpOAuthTest extends TestCase
             'client_name' => 'ChatGPT',
             'redirect_uris' => ['https://chatgpt.com/connector_platform_oauth_redirect'],
         ])->assertCreated()
-            ->assertJsonPath('scope', 'mcp:use')
+            ->assertJsonPath('scope', implode(' ', ['mcp:use', ...array_keys((new McpToolPermissionRegistry)->passportScopes())]))
             ->assertJsonPath('token_endpoint_auth_method', 'none')
             ->assertJsonPath('grant_types.0', 'authorization_code');
 
@@ -119,6 +120,7 @@ class McpOAuthTest extends TestCase
         ])->assertCreated();
 
         $clientId = (string) $registration->json('client_id');
+        $requestedScopes = ['mcp:use', ...array_keys((new McpToolPermissionRegistry)->passportScopes())];
         $user = User::factory()->create();
         $principal = User::factory()->create(['name' => 'AI Assistant', 'email' => 'chatgpt@edventure.ro']);
         config(['mcp.ai_principal_email' => 'chatgpt@edventure.ro']);
@@ -133,7 +135,7 @@ class McpOAuthTest extends TestCase
             'redirect_uri' => $redirectUri,
             'resource' => url('/mcp'),
             'response_type' => 'code',
-            'scope' => 'mcp:use',
+            'scope' => implode(' ', $requestedScopes),
             'state' => 'management-os-state',
             'code_challenge' => $challenge,
             'code_challenge_method' => 'S256',
@@ -171,6 +173,7 @@ class McpOAuthTest extends TestCase
         $this->assertSame([$clientId, url('/mcp')], $jwt->claims()->get('aud'));
         $this->assertSame(url('/'), $jwt->claims()->get('iss'));
         $this->assertSame((string) $principal->getKey(), $jwt->claims()->get('sub'));
+        $this->assertEqualsCanonicalizing($requestedScopes, $jwt->claims()->get('scopes'));
         $this->assertDatabaseHas('oauth_access_tokens', [
             'id' => $jwt->claims()->get('jti'),
             'user_id' => $principal->getKey(),
