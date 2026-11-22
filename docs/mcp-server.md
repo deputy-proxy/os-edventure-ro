@@ -1,5 +1,7 @@
 # Management-OS MCP server
 
+Start with the [MCP setup and operations guide](mcp-setup-and-operations.md) for local setup, ChatGPT connection, principal lifecycle, permissions, approvals, deployment gates, monitoring, and incident response. This page records transport and implementation details.
+
 ## Current implementation status
 
 The repository exposes a remote Model Context Protocol (MCP) endpoint at /mcp using Streamable HTTP. The transport foundation from #529 is protected by the Passport OAuth integration in #530, and the authorization boundary from #531 is in place. The registry includes 44 read-only tools from #533–#536 and #539, plus six approval-gated business operations from #537. Each business operation has a request tool and a companion execution tool; execution is possible only through its independently approved, immutable payload. Issue #538 adds five permission-aware resources and five reusable executive prompt templates. Issue #539 adds fourteen read-only tools across HR/payroll, products, marketing and academic operations. Department and company-policy resources remain deferred because no approved company-wide MCP read permission/source currently exists.
@@ -92,9 +94,10 @@ Expected current result after OAuth authorization: server identity Management-OS
 
 ## ChatGPT connection and authentication constraints
 
-ChatGPT custom MCP connections use a public HTTPS endpoint and support Streamable HTTP. Current custom MCP server connection availability is limited to ChatGPT Business and Enterprise/Edu workspaces; Pro currently has read/fetch-only custom MCP access. Confirm the target workspace's permissions before planning rollout.
+ChatGPT custom MCP connections use a public HTTPS endpoint and support Streamable HTTP. OpenAI currently documents full MCP support for ChatGPT Business and Enterprise/Edu workspaces on web. Pro users have read/fetch-only custom MCP access; mobile connections are not supported. Workspace permissions govern who can create, test, and publish connections. See the current [OpenAI custom MCP server connection guide](https://help.openai.com/en/articles/12584461-connecting-custom-mcp-servers-in-chatgpt) and the [MCP setup and operations guide](mcp-setup-and-operations.md) before rollout.
 
 The Passport provider and OAuth metadata routes are wired, but production readiness is not yet established. Local tests verify discovery, public-client registration, the ChatGPT callback allowlist, authentication denial, scope enforcement, a complete authorization-code/PKCE exchange, refresh-token rotation, replay rejection, and revocation. A live ChatGPT workspace connection remains a staging gate.
+OpenAI's current connection guide requires refresh-token issuance and recommends advertising offline_access (or an equivalent refresh capability) in OAuth discovery. The application currently advertises the refresh_token grant but does not include offline_access in scopes_supported. Confirm whether ChatGPT accepts the advertised grant as equivalent during the live workspace test; if not, add an explicit offline_access scope and regression coverage before claiming interoperability. See [MCP setup and operations](mcp-setup-and-operations.md).
 
 The Management-OS OAuth flow now validates the OAuth `resource` parameter on both authorization and token requests, echoes it in successful token responses, and binds issued JWTs to the `/mcp` resource audience while retaining Passport's client audience for token validation. Automated tests cover matching, missing and incorrect resource values, JWT issuer/audience claims, authorization-code exchange, and refresh-token rotation. This closes the implementation gap in the local Passport integration; a live ChatGPT workspace connection is still required to verify interoperability.
 
@@ -121,4 +124,4 @@ MCP tools must follow the versioned permission matrix and authorization contract
 
 ## Approval and execution audit controls
 
-The encrypted approval lifecycle, independent human review, idempotent execution claim, privacy-safe MCP audit trail, expiry and interrupted-execution recovery are documented in [MCP approval and execution audit controls](mcp-approvals-and-audit.md). The Filament review resources require explicit staff permissions. No business mutation tool is registered; a later domain issue must implement each mutation through an existing authorized service and the approval workflow.
+The encrypted approval lifecycle, independent human review, idempotent execution claim, privacy-safe MCP audit trail, expiry and interrupted-execution recovery are documented in [MCP approval and execution audit controls](mcp-approvals-and-audit.md). The Filament review resources require explicit staff permissions. Six task/CRM operations are registered as approval-request/execution pairs; requests do not mutate business data, and execution uses the exact encrypted payload through existing authorized domain actions. No other business mutation tool is registered.
