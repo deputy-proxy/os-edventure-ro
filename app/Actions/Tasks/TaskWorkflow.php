@@ -288,7 +288,7 @@ final class TaskWorkflow
         $principal = auth()->user();
 
         if (! $principal instanceof User) {
-            throw new AuthorizationException('An authenticated Management-OS principal is required.');
+            throw new AuthorizationException('An authenticated os-edventure-ro principal is required.');
         }
 
         return $principal;
