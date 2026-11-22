@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Mcp\Authorization\McpToolPermissionRegistry;
 use App\Mcp\Server\McpServerFactory;
 use App\Mcp\Tools\Executive\ExecutiveMcpCapabilityRegistrar;
+use App\Mcp\Tools\Management\ManagementMcpCapabilityRegistrar;
 use App\Models\Customer;
 use App\Models\KpiAlert;
 use App\Models\Project;
@@ -61,7 +62,10 @@ class McpExecutiveToolsTest extends TestCase
 
         app()->instance(
             McpServerFactory::class,
-            new McpServerFactory([app(ExecutiveMcpCapabilityRegistrar::class)]),
+            new McpServerFactory([
+                app(ExecutiveMcpCapabilityRegistrar::class),
+                app(ManagementMcpCapabilityRegistrar::class),
+            ]),
         );
     }
 
@@ -104,6 +108,78 @@ class McpExecutiveToolsTest extends TestCase
         $this->assertSame(['current_period', 'comparison_period'], $comparison['inputSchema']['required']);
         $alerts = collect($tools)->firstWhere('name', 'get_kpi_alerts');
         $this->assertSame(50, $alerts['inputSchema']['properties']['limit']['maximum']);
+    }
+
+    public function test_management_resources_reuse_source_authorization_and_filter_results(): void
+    {
+        $this->grantPermissions(['overview-dashboard.view', 'task.index']);
+
+        $sessionId = $this->initializeSession();
+        $response = $this->mcpPost([
+            'jsonrpc' => '2.0',
+            'id' => 5,
+            'method' => 'resources/read',
+            'params' => ['uri' => 'management://overview'],
+        ], $sessionId);
+
+        $response->assertOk()
+            ->assertJsonPath('result.contents.0.uri', 'management://overview');
+
+        $contents = $response->json('result.contents.0.text');
+        $this->assertIsString($contents);
+        $this->assertArrayHasKey('status', json_decode($contents, true, flags: JSON_THROW_ON_ERROR));
+        $this->assertDatabaseHas('mcp_execution_audits', [
+            'tool_name' => 'resource.get_executive_overview',
+            'status' => 'succeeded',
+            'ai_principal_id' => $this->principal->id,
+        ]);
+    }
+
+    public function test_management_resources_deny_reads_without_source_domain_permission(): void
+    {
+        $this->grantPermissions([]);
+
+        $sessionId = $this->initializeSession();
+        $response = $this->mcpPost([
+            'jsonrpc' => '2.0',
+            'id' => 7,
+            'method' => 'resources/read',
+            'params' => ['uri' => 'management://overview'],
+        ], $sessionId);
+
+        $this->assertDatabaseCount('mcp_execution_audits', 1);
+        $this->assertDatabaseHas('mcp_execution_audits', [
+            'tool_name' => 'resource.get_executive_overview',
+            'status' => 'failed',
+            'error_code' => 'authorization_denied',
+            'ai_principal_id' => $this->principal->id,
+        ]);
+    }
+
+    public function test_management_prompts_are_templates_that_require_live_authorized_tool_data(): void
+    {
+        $sessionId = $this->initializeSession();
+        $response = $this->mcpPost([
+            'jsonrpc' => '2.0',
+            'id' => 6,
+            'method' => 'prompts/get',
+            'params' => [
+                'name' => 'daily_ceo_briefing',
+                'arguments' => [
+                    'reporting_period' => '2026-11-22',
+                    'timezone' => 'Europe/Bucharest',
+                    'context' => 'Focus on delivery risks',
+                ],
+            ],
+        ], $sessionId);
+
+        $response->assertOk();
+        $prompt = $response->json('result.messages.0.content.text');
+        $this->assertStringContainsString('get_executive_overview', $prompt);
+        $this->assertStringContainsString('2026-11-22', $prompt);
+        $this->assertStringContainsString('Europe/Bucharest', $prompt);
+        $this->assertStringContainsString('authorization are determined at call time', $prompt);
+        $this->assertStringContainsString('Clearly separate source facts from analysis', $prompt);
     }
 
     public function test_executive_overview_only_includes_domains_with_optional_permissions(): void
