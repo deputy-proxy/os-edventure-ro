@@ -1,12 +1,12 @@
 <?php
 
-namespace Hexters\\HexaLite\\Resources\\Roles\\Widgets;
+namespace Hexters\HexaLite\Resources\Roles\Widgets;
 
-use Filament\\Tables\\Columns\\TextColumn;
-use Filament\\Tables\\Table;
-use Filament\\Widgets\\TableWidget as BaseWidget;
-use Illuminate\\Database\\Eloquent\\Builder;
-use Illuminate\\Database\\Eloquent\\Model;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Table;
+use Filament\Widgets\TableWidget as BaseWidget;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
 
 class RoleUsersWidget extends BaseWidget
 {
