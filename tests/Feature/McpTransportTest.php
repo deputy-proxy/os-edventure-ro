@@ -127,7 +127,18 @@ class McpTransportTest extends TestCase
             'params' => new \stdClass,
         ], $sessionId)->assertOk();
         $tools = $toolsResponse->json('result.tools');
-        $this->assertCount(42, $tools);
+        $cursor = $toolsResponse->json('result.nextCursor');
+        while (is_string($cursor) && $cursor !== '') {
+            $page = $this->mcpPost([
+                'jsonrpc' => '2.0',
+                'id' => 22,
+                'method' => 'tools/list',
+                'params' => ['cursor' => $cursor],
+            ], $sessionId)->assertOk();
+            $tools = [...$tools, ...$page->json('result.tools', [])];
+            $cursor = $page->json('result.nextCursor');
+        }
+        $this->assertCount(56, $tools);
         $this->assertEqualsCanonicalizing([
             'get_executive_overview', 'get_management_kpis', 'get_kpi_alerts', 'get_business_health',
             'get_management_priorities', 'get_period_comparison', 'get_financial_overview', 'get_transactions',
@@ -141,6 +152,11 @@ class McpTransportTest extends TestCase
             'get_overdue_tasks', 'get_operational_bottlenecks', 'get_quarterly_objectives', 'get_meetings',
             'create_task', 'update_task', 'assign_task', 'complete_task',
             'execute_create_task', 'execute_update_task', 'execute_assign_task', 'execute_complete_task',
+            'get_hr_overview', 'get_approved_evaluation_summary', 'get_timesheet_status',
+            'get_payroll_period_status', 'get_payroll_validation_exceptions',
+            'get_product_catalogue', 'get_product_cost_summary', 'get_product_profitability',
+            'get_campaign_performance', 'get_google_ads_import_status', 'get_market_observations',
+            'get_academic_overview', 'get_attendance_summary', 'get_group_operations',
         ], array_column($tools, 'name'));
 
         $resources = $this->mcpPost([
