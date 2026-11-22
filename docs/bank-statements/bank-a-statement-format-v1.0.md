@@ -2,7 +2,7 @@
 
 **Status:** Evidence-backed specification for the observed Banca Comercială Română (BCR) Romanian-language RON account-statement layout. Scope is limited to the supplied statement issued 1 October 2026 for the period 1–30 September 2026. It is not a guarantee that every BCR product or later template uses the same layout.
 
-- Roadmap issue: [#311 - Document Bank A statement format](https://github.com/deputy-proxy/Management-OS/issues/311)
+- Roadmap issue: [#311 - Document Bank A statement format](https://github.com/deputy-proxy/os-edventure-ro/issues/311)
 - Source evidence: one nine-page, digitally text-extractable PDF supplied by the repository owner; account-holder and counterparty data must not be committed.
 - Fixture: `tests/Fixtures/BankStatements/BankA/bcr-ron-layout-synthetic.pdf` (synthetic values; layout/labels derived from the supplied sample, not a copy of the source statement).
 - Independently checked statement arithmetic: opening balance RON 359.11; period debits RON 53,283.17; period credits RON 59,323.00; closing/available balance RON 6,398.94. Check: 359.11 - 53,283.17 + 59,323.00 = 6,398.94.
