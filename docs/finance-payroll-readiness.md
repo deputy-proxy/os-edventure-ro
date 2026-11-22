@@ -77,7 +77,7 @@ php artisan finance:reconciliation-audit
 - Whether a double-entry ledger or statutory accounting integration is required.
 - Approved migration plan for integer monetary fields and legacy JSON, including exports, before/after totals and rollback/recovery evidence.
 
-Until these are decided and reviewed by the designated owner, Management-OS should be described as an internal operational finance and source-linked payroll workflow, not a complete statutory payroll engine or general ledger.
+Until these are decided and reviewed by the designated owner, os-edventure-ro should be described as an internal operational finance and source-linked payroll workflow, not a complete statutory payroll engine or general ledger.
 ## Current readiness decision (2026-10-18)
 
 **Decision: conditional NO-GO for statutory payroll or general-ledger claims.** The repository is suitable only for its documented internal operational workflow, with the manual controls below. A successful test suite or a clean diagnostic report is not proof of statutory correctness, completeness of source activity, or payment settlement.
@@ -136,7 +136,7 @@ No named reviewers for the capability matrix or signed statutory-rule pack are i
 
 ## Roadmap and implementation boundaries
 
-This matrix supports [issue #305](https://github.com/deputy-proxy/Management-OS/issues/305). It is linked from the [project README](../README.md) and the [financial-rules implementation readiness and sequencing plan](financial-rules-implementation-readiness.md).
+This matrix supports [issue #305](https://github.com/deputy-proxy/os-edventure-ro/issues/305). It is linked from the [project README](../README.md) and the [financial-rules implementation readiness and sequencing plan](financial-rules-implementation-readiness.md).
 
 1. **#305 capability matrix:** inventory current workflows, controls, gaps and evidence; obtain stakeholder review.
 2. **#306 canonical financial data contract:** map fields and consumers only after financial semantics are approved.
