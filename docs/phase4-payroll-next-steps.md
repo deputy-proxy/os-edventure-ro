@@ -31,7 +31,7 @@ Prepare versioned policy decisions and expected-result fixtures for the actual a
 
 The Romanian payroll/accounting reviewer must supply or approve representative expected results and edge cases. Finance/HR approves company-specific choices. Record approval and effective dates in a durable decision record.
 
-**Exit condition:** signed/traceable reviewer approval and fixtures exist. Until then, Management-OS payslips remain operational activity-based records, not statutory payroll calculations.
+**Exit condition:** signed/traceable reviewer approval and fixtures exist. Until then, os-edventure-ro payslips remain operational activity-based records, not statutory payroll calculations.
 
 ### 3. Define the employee payroll input contract (#338)
 
