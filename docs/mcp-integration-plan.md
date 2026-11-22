@@ -282,7 +282,7 @@ Reuse `TasksAndProjectsData`, task resources/actions and escalation services. En
 - Employee overview, approved evaluation summaries, timesheet status and payroll period status/validation exceptions only.
 - Do not expose unrestricted employee records, bank details, identifiers, salary/payslip line detail or sensitive HR notes by default.
 - No payroll creation, calculation, approval, close, correction or payment mutations through the initial MCP programme.
-- Require explicit HR/finance owner approval of field-level access and retention before enabling any HR tools.
+- Project-owner development authorization for HR/payroll was recorded on 2026-11-22 in issue #539. Initial MCP tools remain aggregate-only; production rollout still requires review of the exact fields, audience and retention.
 
 ### Products, marketing and academic operations (Release 4)
 
@@ -354,7 +354,7 @@ Exit criteria:
 Issue: HR, products, marketing and academic tools.
 
 Exit criteria:
-- Domain owners approve field-level access and data retention.
+- Project-owner development authorization across all four domains was recorded in issue #539 on 2026-11-22. Production rollout still requires review and recorded approval of the exact fields, audience and retention.
 - Sensitive HR/student data is minimized.
 - Source provenance and measurement semantics are preserved.
 - Each domain has dedicated tests, docs and explicit enablement permissions.
@@ -374,7 +374,7 @@ Create one MCP umbrella issue and focused implementation issues. The GitHub issu
 9. **Operations read tools:** projects/tasks/overdue/bottlenecks/objectives/meetings reads.
 10. **Controlled mutations:** task create/update/assign/complete and CRM interaction/lead create, with approval and audit. Lead conversion is not automatically included.
 11. **Resources and prompts:** management resources and CEO/weekly/finance/operations/growth prompt templates.
-12. **Extended domains:** HR, products, marketing and academic tools after domain privacy review.
+12. **Extended domains:** HR, products, marketing and academic read tools; #539 implements the initial aggregate-only scope under project-owner development authorization, with production field/audience/retention review retained as a release gate.
 13. **Documentation and operations:** complete operator/developer documentation, ChatGPT connection guide, permission matrix, incident/revocation procedure, monitoring, deployment and recovery instructions, updated as each implementation issue lands.
 
 Dependency order:
@@ -382,7 +382,7 @@ Dependency order:
 - Read-domain issues 6–9 depend on transport, identity and authorization.
 - Controlled mutation issue 10 depends on approval/audit/idempotency and the relevant CRM/operations read/domain workflows.
 - Resources/prompts issue 11 depends on the reporting tools and permission model.
-- Extended domains issue 12 depends on the secure foundation and domain-owner review.
+- Extended domains issue 12 depends on the secure foundation and project-owner development authorization; production field, audience and retention review remains a release gate.
 - Documentation issue 13 is cross-cutting and must be updated with each issue, with final operator docs gated on implemented behavior.
 - Coordinate with #246, #247, #251, #252, #253 and #257. Do not duplicate or silently replace their scope. Reconcile #297/#299 for Market Trends ingestion.
 

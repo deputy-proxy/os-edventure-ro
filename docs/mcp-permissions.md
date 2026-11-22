@@ -1,6 +1,6 @@
 # MCP permission matrix
 
-**Matrix version:** 1.5.0 (configured by mcp.permission_matrix_version)
+**Matrix version:** 1.6.0 (configured by mcp.permission_matrix_version)
 
 This document is the operator-facing companion to `config/mcp.php`. The configuration is the runtime source of truth. Every registered MCP tool must have exactly one entry under `mcp.tool_permissions`; the server refuses to register a tool without one.
 
@@ -91,7 +91,7 @@ Never assign Owner/superadmin or copy a human user's role set to the AI principa
 
 ## Current state
 
-Issues #533–#536 register 30 read-only executive, finance, CRM and operations tools. Issue #537 adds six approval-gated business operations, each represented by a request tool and an execution companion. The matrix therefore contains 42 tools: 30 read tools and 12 write request/execution tools. Executive tools use `overview-dashboard.view` (with `kpi_alert.view_own` for alerts); finance tools declare granular permissions for dashboard, transactions, receivables/payables, forecasts, budgets, profitability, reconciliation and invoice detail. Optional source permissions are evaluated independently. The AI principal receives no domain permissions automatically. Operators must explicitly assign only reviewed permissions declared in the runtime matrix. See [MCP executive tools](mcp-executive-tools.md), [MCP finance tools](mcp-finance-tools.md), [MCP CRM tools](mcp-crm-tools.md), and [MCP operations tools](mcp-operations-tools.md) for schemas, sources, and limitations.
+Issues #533–#536 register 30 read-only executive, finance, CRM and operations tools. Issue #537 adds six approval-gated business operations, each represented by a request tool and an execution companion. Issue #539 adds fourteen read-only tools for HR/payroll, products, marketing and academic operations. The matrix therefore contains 56 tools: 44 read tools and 12 write request/execution tools. Executive tools use `overview-dashboard.view` (with `kpi_alert.view_own` for alerts); finance tools declare granular permissions for dashboard, transactions, receivables/payables, forecasts, budgets, profitability, reconciliation and invoice detail. Optional source permissions are evaluated independently. The AI principal receives no domain permissions automatically. Operators must explicitly assign only reviewed permissions declared in the runtime matrix. See [MCP executive tools](mcp-executive-tools.md), [MCP finance tools](mcp-finance-tools.md), [MCP CRM tools](mcp-crm-tools.md), [MCP operations tools](mcp-operations-tools.md), and [MCP extended domain tools](mcp-extended-domain-tools.md) for schemas, sources, and limitations.
 
 
 ## CRM and sales tool permission matrix
@@ -148,7 +148,7 @@ Issue #532 adds three separate Management-OS staff permissions:
 
 Assign these only to designated human reviewers/auditors. The configured AI principal is explicitly denied access even if it is accidentally assigned one of these permissions. The Filament resources are read-only except for the approve/reject actions; model/service guards preserve the same boundary server-side. See [MCP approval and execution audit controls](mcp-approvals-and-audit.md).
 
-All 42 tools are registered with explicit tool scopes, required and optional domain permissions, record scopes, and output-field allowlists. The six #537 business operations are approval-gated: request tools create pending approvals and execution companions accept only approval_id. No other business mutations are exposed. Every future write must use payload-bound approval, an independent human reviewer, execution-time authorization, and an existing domain service.
+All 56 tools are registered with explicit tool scopes, required and optional domain permissions, record scopes, and output-field allowlists. The six #537 business operations are approval-gated: request tools create pending approvals and execution companions accept only approval_id. No other business mutations are exposed. Every future write must use payload-bound approval, an independent human reviewer, execution-time authorization, and an existing domain service.
 
 
 ## Finance tool permission matrix
@@ -178,3 +178,27 @@ The MCP server also exposes five read-only resources: `management://overview`, `
 Five prompt templates are available: `daily_ceo_briefing`, `weekly_management_review`, `financial_review`, `operations_review`, and `business_growth_review`. They accept optional reporting period, timezone and context arguments. Prompts do not authorize tools, fetch business data, or embed live business figures. The model must call the available tools, and every tool call independently passes the same OAuth, principal, domain-permission and record-scope checks described above. Prompt instructions explicitly preserve unavailable states, freshness, provenance, currency boundaries, task visibility and the distinction between facts and analysis.
 
 The candidate department and company-policy resources are not exposed: the current application has no approved company-wide MCP read permission/source for them. HR/payroll policy screens are not treated as general company-policy sources.
+
+
+## Extended domain tool permission matrix (#539)
+
+The fourteen #539 tools are read-only and use dedicated scopes. HR/payroll and academic breakdowns apply a minimum cohort size of five. No employee or student-level records are returned.
+
+| Tool | OAuth scope | Required permissions |
+| --- | --- | --- |
+| `get_hr_overview` | `mcp.hr.overview.read` | `employee.index` |
+| `get_approved_evaluation_summary` | `mcp.hr.evaluations.read` | `employee_evaluation.index` |
+| `get_timesheet_status` | `mcp.hr.timesheets.read` | `employee_timesheet.index` |
+| `get_payroll_period_status` | `mcp.hr.payroll-periods.read` | `employee_pay_slip.index` |
+| `get_payroll_validation_exceptions` | `mcp.hr.payroll-exceptions.read` | `payroll_exception.index` |
+| `get_product_catalogue` | `mcp.products.catalogue.read` | `product.index` |
+| `get_product_cost_summary` | `mcp.products.costs.read` | `product_cost.index` |
+| `get_product_profitability` | `mcp.products.profitability.read` | `product.index`, `finance-profitability.view` |
+| `get_campaign_performance` | `mcp.marketing.campaign-performance.read` | `paid_campaign.index` |
+| `get_google_ads_import_status` | `mcp.marketing.google-ads-imports.read` | `paid_campaign.index` |
+| `get_market_observations` | `mcp.marketing.market-observations.read` | `competitor_offer.index`, `market_trend.index` |
+| `get_academic_overview` | `mcp.academic.overview.read` | `student.index`, `group.index`, `session.index` |
+| `get_attendance_summary` | `mcp.academic.attendance.read` | `session_attendance.index`, `session.index` |
+| `get_group_operations` | `mcp.academic.groups.read` | `group.index`, `session.index` |
+
+The project owner authorized development across all four domains on 2026-11-22. This authorization is recorded in issue #539. It does not authorize unrestricted personal-data disclosure or production enablement. The tools expose aggregate-only HR and academic data, omit bank details, salary/payslip lines, personal identifiers, sensitive HR notes and individual student records, and preserve source/provenance and currency boundaries. Production rollout remains subject to review of exact fields, audience and retention. See [MCP extended domain tools](mcp-extended-domain-tools.md) for complete field and suppression rules.
