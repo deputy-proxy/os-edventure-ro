@@ -84,8 +84,8 @@ class McpTransportTest extends TestCase
         $response->assertOk()
             ->assertJsonPath('result.supportedVersions.0', '2026-07-28')
             ->assertJsonPath('result.capabilities.tools', [])
-            ->assertJsonMissingPath('result.capabilities.resources')
-            ->assertJsonMissingPath('result.capabilities.prompts');
+            ->assertJsonPath('result.capabilities.resources', [])
+            ->assertJsonPath('result.capabilities.prompts', []);
     }
 
     public function test_mcp_requires_passport_authentication_and_scope_before_protocol_processing(): void
@@ -143,19 +143,28 @@ class McpTransportTest extends TestCase
             'execute_create_task', 'execute_update_task', 'execute_assign_task', 'execute_complete_task',
         ], array_column($tools, 'name'));
 
-        $this->mcpPost([
+        $resources = $this->mcpPost([
             'jsonrpc' => '2.0',
             'id' => 3,
             'method' => 'resources/list',
             'params' => new \stdClass,
-        ], $sessionId)->assertOk()->assertJsonPath('result.resources', []);
+        ], $sessionId)->assertOk()->json('result.resources');
+        $this->assertEqualsCanonicalizing([
+            'management://overview', 'management://kpis', 'finance://current-position',
+            'finance://reporting-rules', 'operations://priorities',
+        ], array_column($resources, 'uri'));
 
-        $this->mcpPost([
+        $prompts = $this->mcpPost([
             'jsonrpc' => '2.0',
             'id' => 4,
             'method' => 'prompts/list',
             'params' => new \stdClass,
-        ], $sessionId)->assertOk()->assertJsonPath('result.prompts', []);
+        ], $sessionId)->assertOk()->json('result.prompts');
+        $this->assertEqualsCanonicalizing([
+            'daily_ceo_briefing', 'weekly_management_review', 'financial_review',
+            'operations_review', 'business_growth_review',
+        ], array_column($prompts, 'name'));
+
     }
 
     public function test_cors_preflight_allows_only_configured_origins(): void
