@@ -2,8 +2,8 @@
 
 use App\Mcp\Authorization\Scopes\McpGlobalRecordScope;
 use App\Mcp\Authorization\Scopes\McpOwnedRecordScope;
-use App\Mcp\Tools\Crm\CrmMcpCapabilityRegistrar;
 use App\Mcp\Authorization\Scopes\McpTaskRecordScope;
+use App\Mcp\Tools\Crm\CrmMcpCapabilityRegistrar;
 use App\Mcp\Tools\Executive\ExecutiveMcpCapabilityRegistrar;
 use App\Mcp\Tools\Finance\FinanceMcpCapabilityRegistrar;
 use App\Mcp\Tools\Operations\OperationsMcpCapabilityRegistrar;
@@ -74,7 +74,7 @@ $kpiResultFields = [
 return [
     'authorization_server' => $authorizationServer === '' ? null : rtrim($authorizationServer, '/'),
     'ai_principal_email' => env('MCP_AI_PRINCIPAL_EMAIL'),
-    'permission_matrix_version' => '1.4.0',
+    'permission_matrix_version' => '1.5.0',
     'domain_permission_guard' => env('MCP_DOMAIN_PERMISSION_GUARD', config('auth.defaults.guard', 'web')),
     'principal_role' => 'Assistant',
     'capability_registrars' => [
@@ -442,6 +442,80 @@ return [
         'get_invoice_details' => [
             'mcp_scope' => 'mcp.finance.invoice.read', 'operation_type' => 'read', 'domain_permissions' => ['receivables-payables.view'], 'optional_domain_permissions' => ['customer_invoice.index', 'vendor_invoice.index', 'transaction.index'], 'record_scope' => McpGlobalRecordScope::class,
             'allowed_fields' => ['availability' => true, 'as_of' => true, 'timezone' => true, 'invoice' => ['source_type' => true, 'source_reference' => true, 'document_date' => true, 'due_date' => true, 'currency_code' => true, 'invoice_total' => true, 'confirmed_allocated' => true, 'outstanding_amount' => true, 'credit_amount' => true, 'balance_status' => true, 'payment_state' => true, 'aging_bucket' => true, 'days_overdue' => true, 'allocation_count' => true, 'pending_allocation_count' => true, 'reversed_allocation_count' => true, 'reason_codes' => true, 'document_status' => true, 'source_status' => true, 'payable_amount_availability' => true, 'payment_data_availability' => true]],
+        ],
+        'create_task' => [
+            'mcp_scope' => 'mcp.operations.tasks.create', 'operation_type' => 'write', 'requires_approval' => true,
+            'domain_permissions' => ['task.create', 'project.index', 'project_phase.index'],
+            'optional_domain_permissions' => ['task.assign', 'task.view_all'],
+            'record_scope' => McpGlobalRecordScope::class,
+            'allowed_fields' => ['approval_id' => true, 'status' => true, 'expires_at' => true, 'preview_summary' => true],
+        ],
+        'execute_create_task' => [
+            'mcp_scope' => 'mcp.operations.tasks.create.execute', 'operation_type' => 'write', 'requires_approval' => true,
+            'domain_permissions' => ['task.create', 'project.index', 'project_phase.index'],
+            'optional_domain_permissions' => ['task.assign', 'task.view_all'],
+            'record_scope' => McpGlobalRecordScope::class,
+            'allowed_fields' => ['task_id' => true, 'action' => true, 'status' => true, 'assigned_to' => true, 'due_date' => true, 'updated_at' => true],
+        ],
+        'update_task' => [
+            'mcp_scope' => 'mcp.operations.tasks.update', 'operation_type' => 'write', 'requires_approval' => true,
+            'domain_permissions' => ['task.update'], 'optional_domain_permissions' => ['task.view_all'],
+            'record_scope' => McpTaskRecordScope::class,
+            'allowed_fields' => ['approval_id' => true, 'status' => true, 'expires_at' => true, 'preview_summary' => true],
+        ],
+        'execute_update_task' => [
+            'mcp_scope' => 'mcp.operations.tasks.update.execute', 'operation_type' => 'write', 'requires_approval' => true,
+            'domain_permissions' => ['task.update'], 'optional_domain_permissions' => ['task.view_all'],
+            'record_scope' => McpTaskRecordScope::class,
+            'allowed_fields' => ['task_id' => true, 'action' => true, 'status' => true, 'assigned_to' => true, 'due_date' => true, 'updated_at' => true],
+        ],
+        'assign_task' => [
+            'mcp_scope' => 'mcp.operations.tasks.assign', 'operation_type' => 'write', 'requires_approval' => true,
+            'domain_permissions' => ['task.update', 'task.assign'], 'optional_domain_permissions' => ['task.view_all'],
+            'record_scope' => McpTaskRecordScope::class,
+            'allowed_fields' => ['approval_id' => true, 'status' => true, 'expires_at' => true, 'preview_summary' => true],
+        ],
+        'execute_assign_task' => [
+            'mcp_scope' => 'mcp.operations.tasks.assign.execute', 'operation_type' => 'write', 'requires_approval' => true,
+            'domain_permissions' => ['task.update', 'task.assign'], 'optional_domain_permissions' => ['task.view_all'],
+            'record_scope' => McpTaskRecordScope::class,
+            'allowed_fields' => ['task_id' => true, 'action' => true, 'status' => true, 'assigned_to' => true, 'due_date' => true, 'updated_at' => true],
+        ],
+        'complete_task' => [
+            'mcp_scope' => 'mcp.operations.tasks.complete', 'operation_type' => 'write', 'requires_approval' => true,
+            'domain_permissions' => ['task.update'], 'optional_domain_permissions' => ['task.view_all'],
+            'record_scope' => McpTaskRecordScope::class,
+            'allowed_fields' => ['approval_id' => true, 'status' => true, 'expires_at' => true, 'preview_summary' => true],
+        ],
+        'execute_complete_task' => [
+            'mcp_scope' => 'mcp.operations.tasks.complete.execute', 'operation_type' => 'write', 'requires_approval' => true,
+            'domain_permissions' => ['task.update'], 'optional_domain_permissions' => ['task.view_all'],
+            'record_scope' => McpTaskRecordScope::class,
+            'allowed_fields' => ['task_id' => true, 'action' => true, 'status' => true, 'assigned_to' => true, 'due_date' => true, 'updated_at' => true],
+        ],
+        'create_customer_interaction' => [
+            'mcp_scope' => 'mcp.crm.interactions.create', 'operation_type' => 'write', 'requires_approval' => true,
+            'domain_permissions' => ['customer.index', 'customer_interaction.create'],
+            'record_scope' => McpGlobalRecordScope::class,
+            'allowed_fields' => ['approval_id' => true, 'status' => true, 'expires_at' => true, 'preview_summary' => true],
+        ],
+        'execute_create_customer_interaction' => [
+            'mcp_scope' => 'mcp.crm.interactions.create.execute', 'operation_type' => 'write', 'requires_approval' => true,
+            'domain_permissions' => ['customer.index', 'customer_interaction.create'],
+            'record_scope' => McpGlobalRecordScope::class,
+            'allowed_fields' => ['interaction_id' => true, 'customer_id' => true, 'timestamp' => true, 'interaction_rating' => true],
+        ],
+        'create_customer_lead' => [
+            'mcp_scope' => 'mcp.crm.leads.create', 'operation_type' => 'write', 'requires_approval' => true,
+            'domain_permissions' => ['customer_lead.create'],
+            'record_scope' => McpGlobalRecordScope::class,
+            'allowed_fields' => ['approval_id' => true, 'status' => true, 'expires_at' => true, 'preview_summary' => true],
+        ],
+        'execute_create_customer_lead' => [
+            'mcp_scope' => 'mcp.crm.leads.create.execute', 'operation_type' => 'write', 'requires_approval' => true,
+            'domain_permissions' => ['customer_lead.create'],
+            'record_scope' => McpGlobalRecordScope::class,
+            'allowed_fields' => ['lead_id' => true, 'status' => true, 'created_at' => true],
         ],
     ],
     'access_token_ttl_minutes' => (int) env('MCP_ACCESS_TOKEN_TTL_MINUTES', 60),

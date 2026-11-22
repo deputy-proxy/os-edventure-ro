@@ -88,17 +88,33 @@ abstract class AuthorizedMcpCapabilityRegistrar implements McpCapabilityRegistra
         $approvalService = app(McpApprovalService::class);
 
         $handler = static function (User $principal, array $arguments) use ($previewFactory, $approvalService, $toolName): array {
-            $details = $previewFactory($principal, $arguments);
-            if (! array_key_exists('preview', $details) || ! is_array($details['preview'])) {
-                throw ValidationException::withMessages([
-                    'preview' => 'The write tool must provide a safe human-readable approval preview.',
-                ]);
-            }
-
             $idempotencyKey = $arguments['idempotency_key'] ?? null;
             if (! is_string($idempotencyKey)) {
                 throw ValidationException::withMessages([
                     'idempotency_key' => 'An idempotency_key is required for controlled MCP writes.',
+                ]);
+            }
+
+            $existing = $approvalService->existingIdempotentRequest(
+                $principal,
+                $toolName,
+                $arguments,
+                $idempotencyKey,
+            );
+
+            if ($existing !== null) {
+                return [
+                    'approval_id' => $existing->getKey(),
+                    'status' => $existing->status,
+                    'expires_at' => $existing->expires_at?->toIso8601String(),
+                    'preview_summary' => $existing->preview_summary,
+                ];
+            }
+
+            $details = $previewFactory($principal, $arguments);
+            if (! array_key_exists('preview', $details) || ! is_array($details['preview'])) {
+                throw ValidationException::withMessages([
+                    'preview' => 'The write tool must provide a safe human-readable approval preview.',
                 ]);
             }
 
@@ -155,6 +171,9 @@ abstract class AuthorizedMcpCapabilityRegistrar implements McpCapabilityRegistra
         }
 
         $properties = $inputSchema['properties'] ?? null;
+        if (is_object($properties)) {
+            $properties = (array) $properties;
+        }
         $required = $inputSchema['required'] ?? null;
         if (! is_array($properties)
             || array_keys($properties) !== ['approval_id']

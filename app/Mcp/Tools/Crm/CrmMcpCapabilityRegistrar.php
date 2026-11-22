@@ -2,6 +2,8 @@
 
 namespace App\Mcp\Tools\Crm;
 
+use App\Actions\Crm\CreateCustomerInteraction;
+use App\Actions\Crm\CreateCustomerLead;
 use App\Mcp\Authorization\AuthorizedMcpCapabilityRegistrar;
 use App\Models\Customer;
 use App\Models\CustomerContract;
@@ -16,6 +18,7 @@ use App\Services\CustomerDashboardData;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 use Mcp\Server\Builder as McpBuilder;
@@ -48,6 +51,116 @@ final class CrmMcpCapabilityRegistrar extends AuthorizedMcpCapabilityRegistrar
         foreach ($tools as $name => $handler) {
             $this->addAuthorizedTool($builder, $name, $handler, $descriptions[$name], $this->schema($name));
         }
+
+        $this->registerCrmWriteTools($builder);
+    }
+
+    private function registerCrmWriteTools(McpBuilder $builder): void
+    {
+        $interactionAction = app(CreateCustomerInteraction::class);
+        $leadAction = app(CreateCustomerLead::class);
+
+        $this->addApprovalRequestTool(
+            $builder,
+            'create_customer_interaction',
+            function (User $user, array $arguments) use ($interactionAction): array {
+                return $this->withPrincipalContext($user, function () use ($user, $arguments, $interactionAction): array {
+                    $values = $interactionAction->validate(Arr::except($arguments, ['idempotency_key']));
+                    $customer = $this->scopeQuery(
+                        $user,
+                        'create_customer_interaction',
+                        Customer::query(),
+                    )->whereKey($values['customer_id'])->firstOrFail();
+                    $this->authorizeRecord($user, 'create_customer_interaction', $customer);
+
+                    return [
+                        'preview' => [
+                            'operation' => 'Create customer interaction',
+                            'customer_id' => (string) $customer->getKey(),
+                            'initiator' => $values['initiator'],
+                            'reason' => $values['reason'],
+                            'timestamp' => CarbonImmutable::parse($values['timestamp'], self::TZ)->toIso8601String(),
+                            'interaction_rating' => (string) $values['interaction_rating'],
+                            'description_length' => (string) mb_strlen($values['description']),
+                        ],
+                        'target_type' => 'customer',
+                        'target_id' => (string) $customer->getKey(),
+                    ];
+                });
+            },
+            'Requests independent human approval to record a customer interaction. Free-text content is encrypted in the approval payload and omitted from the preview.',
+            $this->schema('create_customer_interaction'),
+        );
+
+        $this->addApprovalRequestTool(
+            $builder,
+            'create_customer_lead',
+            function (User $user, array $arguments) use ($leadAction): array {
+                return $this->withPrincipalContext($user, function () use ($arguments, $leadAction): array {
+                    $values = $leadAction->validate(Arr::except($arguments, ['idempotency_key']));
+                    $fullName = collect([
+                        $values['first_name'],
+                        $values['middle_name'] ?? '',
+                        $values['last_name'],
+                    ])->filter()->implode(' ');
+
+                    return [
+                        'preview' => [
+                            'operation' => 'Create customer lead',
+                            'full_name' => $fullName,
+                            'source' => $values['source'],
+                            'source_category' => $values['source_category'],
+                            'topic_interest' => $values['topic_interest'],
+                            'product_interest' => $values['product_interest'],
+                            'contact_data' => 'Email and phone are present in the encrypted payload; their values are hidden from this preview.',
+                            'status' => 'new',
+                        ],
+                        'target_type' => 'customer_lead',
+                    ];
+                });
+            },
+            'Requests independent human approval to create a new customer lead. Contact details remain encrypted and are not shown in the approval preview.',
+            $this->schema('create_customer_lead'),
+        );
+
+        $this->addApprovedExecutionTool(
+            $builder,
+            'execute_create_customer_interaction',
+            'create_customer_interaction',
+            function (User $user, array $arguments) use ($interactionAction): array {
+                return $this->withPrincipalContext($user, function () use ($arguments, $interactionAction): array {
+                    $interaction = $interactionAction->handle(Arr::except($arguments, ['idempotency_key']));
+
+                    return [
+                        'interaction_id' => (int) $interaction->getKey(),
+                        'customer_id' => (int) $interaction->customer_id,
+                        'timestamp' => CarbonImmutable::parse($interaction->timestamp, self::TZ)->toIso8601String(),
+                        'interaction_rating' => (int) $interaction->interaction_rating,
+                    ];
+                });
+            },
+            'Executes an approved customer interaction creation using its immutable approved payload.',
+            $this->schema('execute_create_customer_interaction'),
+        );
+
+        $this->addApprovedExecutionTool(
+            $builder,
+            'execute_create_customer_lead',
+            'create_customer_lead',
+            function (User $user, array $arguments) use ($leadAction): array {
+                return $this->withPrincipalContext($user, function () use ($arguments, $leadAction): array {
+                    $lead = $leadAction->handle(Arr::except($arguments, ['idempotency_key']));
+
+                    return [
+                        'lead_id' => (int) $lead->getKey(),
+                        'status' => (string) $lead->status,
+                        'created_at' => $lead->created_at?->toIso8601String(),
+                    ];
+                });
+            },
+            'Executes an approved customer lead creation using its immutable approved payload.',
+            $this->schema('execute_create_customer_lead'),
+        );
     }
 
     private function searchCustomers(User $user, array $arguments): array
@@ -387,12 +500,43 @@ final class CrmMcpCapabilityRegistrar extends AuthorizedMcpCapabilityRegistrar
                 'limit' => ['type' => 'integer', 'minimum' => 1, 'maximum' => 100],
                 'offset' => ['type' => 'integer', 'minimum' => 0, 'maximum' => 1000],
             ],
+            'create_customer_interaction' => [
+                'customer_id' => ['type' => 'integer', 'minimum' => 1],
+                'initiator' => ['type' => 'string', 'enum' => ['Customer', 'Coordinator']],
+                'reason' => ['type' => 'string', 'enum' => ['Product Inquiry', 'Billing Question', 'Complaint', 'Feedback']],
+                'description' => ['type' => 'string', 'minLength' => 1, 'maxLength' => 10000],
+                'timestamp' => ['type' => 'string', 'format' => 'date-time'],
+                'interaction_rating' => ['type' => 'integer', 'minimum' => 1, 'maximum' => 5],
+                'idempotency_key' => ['type' => 'string', 'minLength' => 1, 'maxLength' => 128, 'pattern' => '^[A-Za-z0-9._:-]+$'],
+            ],
+            'create_customer_lead' => [
+                'first_name' => ['type' => 'string', 'minLength' => 1, 'maxLength' => 255],
+                'middle_name' => ['type' => 'string', 'maxLength' => 255],
+                'last_name' => ['type' => 'string', 'minLength' => 1, 'maxLength' => 255],
+                'email' => ['type' => 'string', 'format' => 'email', 'maxLength' => 255],
+                'phone' => ['type' => 'string', 'minLength' => 1, 'maxLength' => 50],
+                'source' => ['type' => 'string', 'minLength' => 1, 'maxLength' => 100],
+                'source_category' => ['type' => 'string', 'enum' => ['organic_search', 'paid_search', 'social', 'referral', 'partner', 'event', 'outbound', 'direct', 'website', 'existing_customer', 'other', 'unknown']],
+                'campaign_name' => ['type' => 'string', 'maxLength' => 255],
+                'referral_partner' => ['type' => 'string', 'maxLength' => 255],
+                'source_captured_at' => ['type' => 'string', 'format' => 'date-time'],
+                'topic_interest' => ['type' => 'string', 'minLength' => 1, 'maxLength' => 255],
+                'product_interest' => ['type' => 'string', 'minLength' => 1, 'maxLength' => 255],
+                'last_contacted_at' => ['type' => 'string', 'format' => 'date-time'],
+                'idempotency_key' => ['type' => 'string', 'minLength' => 1, 'maxLength' => 128, 'pattern' => '^[A-Za-z0-9._:-]+$'],
+            ],
+            'execute_create_customer_interaction', 'execute_create_customer_lead' => [
+                'approval_id' => ['type' => 'integer', 'minimum' => 1],
+            ],
             default => [],
         };
         $required = match ($name) {
             'search_customers' => ['query'],
             'get_customer_details', 'get_customer_contracts', 'get_customer_interactions' => ['customer_id'],
             'get_lead_details' => ['lead_id'],
+            'create_customer_interaction' => ['customer_id', 'initiator', 'reason', 'description', 'timestamp', 'interaction_rating', 'idempotency_key'],
+            'create_customer_lead' => ['first_name', 'last_name', 'email', 'phone', 'source', 'source_category', 'topic_interest', 'product_interest', 'last_contacted_at', 'idempotency_key'],
+            'execute_create_customer_interaction', 'execute_create_customer_lead' => ['approval_id'],
             default => [],
         };
 

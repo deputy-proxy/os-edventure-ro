@@ -1,6 +1,6 @@
 # MCP permission matrix
 
-**Matrix version:** 1.4.0 (configured by mcp.permission_matrix_version)
+**Matrix version:** 1.5.0 (configured by mcp.permission_matrix_version)
 
 This document is the operator-facing companion to `config/mcp.php`. The configuration is the runtime source of truth. Every registered MCP tool must have exactly one entry under `mcp.tool_permissions`; the server refuses to register a tool without one.
 
@@ -91,12 +91,12 @@ Never assign Owner/superadmin or copy a human user's role set to the AI principa
 
 ## Current state
 
-Issue #533 registers six read-only executive tools. Issue #534 adds nine read-only finance tools. Issue #535 adds seven read-only CRM/sales tools. Issue #536 adds eight read-only operations tools. Executive tools use `overview-dashboard.view` (with `kpi_alert.view_own` for alerts); finance tools declare granular permissions for dashboard, transactions, receivables/payables, forecasts, budgets, profitability, reconciliation and invoice detail. Optional source permissions are evaluated independently. The AI principal receives no domain permissions automatically. Operators must explicitly assign only reviewed permissions declared in the runtime matrix. See [MCP executive tools](mcp-executive-tools.md), [MCP finance tools](mcp-finance-tools.md), and [MCP CRM tools](mcp-crm-tools.md), and [MCP operations tools](mcp-operations-tools.md) for schemas, sources, and limitations.
+Issues #533–#536 register 30 read-only executive, finance, CRM and operations tools. Issue #537 adds six approval-gated business operations, each represented by a request tool and an execution companion. The matrix therefore contains 42 tools: 30 read tools and 12 write request/execution tools. Executive tools use `overview-dashboard.view` (with `kpi_alert.view_own` for alerts); finance tools declare granular permissions for dashboard, transactions, receivables/payables, forecasts, budgets, profitability, reconciliation and invoice detail. Optional source permissions are evaluated independently. The AI principal receives no domain permissions automatically. Operators must explicitly assign only reviewed permissions declared in the runtime matrix. See [MCP executive tools](mcp-executive-tools.md), [MCP finance tools](mcp-finance-tools.md), [MCP CRM tools](mcp-crm-tools.md), and [MCP operations tools](mcp-operations-tools.md) for schemas, sources, and limitations.
 
 
 ## CRM and sales tool permission matrix
 
-All seven CRM tools are read-only. Customer, contract, interaction and lead tools use the corresponding current resource index permissions. Customer economics uses the separate unit-economics report-view permission.
+Seven CRM tools remain read-only. Two additional CRM operations are approval-gated: creating a customer interaction and creating a customer lead. Customer, contract, interaction and lead read tools use the corresponding current resource index permissions. Customer economics uses the separate unit-economics report-view permission.
 
 | Tool | OAuth scope | Required permissions |
 | --- | --- | --- |
@@ -107,6 +107,10 @@ All seven CRM tools are read-only. Customer, contract, interaction and lead tool
 | `get_sales_pipeline` | `mcp.crm.sales-pipeline.read` | customer_lead.index |
 | `get_lead_details` | `mcp.crm.leads.read` | customer_lead.index |
 | `get_customer_economics` | `mcp.crm.customer-economics.read` | finance-unit-economics.view |
+| `create_customer_interaction` | `mcp.crm.interactions.create` | customer.index, customer_interaction.create |
+| `execute_create_customer_interaction` | `mcp.crm.interactions.create.execute` | customer.index, customer_interaction.create |
+| `create_customer_lead` | `mcp.crm.leads.create` | customer_lead.create |
+| `execute_create_customer_lead` | `mcp.crm.leads.create.execute` | customer_lead.create |
 
 CRM outputs exclude customer email, phone, CNP/CUI, addresses, contract documents, free-text interaction notes, lead contact details, personal interests, actor identities, converted customer IDs and unit-economics source snapshots. Search and list queries are scoped before count/pagination and use bounded database pagination. The sales pipeline uses current lead status and attribution data; its open-lead status counts exclude converted leads while source attribution counts include non-soft-deleted converted leads. Unit-economics reads existing immutable runs and preserves null/incomplete values rather than recalculating or treating unknown amounts as zero. See [MCP CRM tools](mcp-crm-tools.md) for complete output and metric semantics.
 ## Operations tool permission matrix
@@ -123,6 +127,14 @@ Task tools use the task resource's assigned/created visibility scope unless task
 | get_operational_bottlenecks | mcp.operations.bottlenecks.read | task.index | task.view_all, project.index, project_phase.index |
 | get_quarterly_objectives | mcp.operations.quarterly-objectives.read | quarterly_objective.index | — |
 | get_meetings | mcp.operations.meetings.read | meeting.index | — |
+| create_task | mcp.operations.tasks.create | task.create, project.index, project_phase.index | task.assign, task.view_all |
+| execute_create_task | mcp.operations.tasks.create.execute | task.create, project.index, project_phase.index | task.assign, task.view_all |
+| update_task | mcp.operations.tasks.update | task.update | task.view_all |
+| execute_update_task | mcp.operations.tasks.update.execute | task.update | task.view_all |
+| assign_task | mcp.operations.tasks.assign | task.update, task.assign | task.view_all |
+| execute_assign_task | mcp.operations.tasks.assign.execute | task.update, task.assign | task.view_all |
+| complete_task | mcp.operations.tasks.complete | task.update | task.view_all |
+| execute_complete_task | mcp.operations.tasks.complete.execute | task.update | task.view_all |
 
 Operations outputs exclude task descriptions, creator IDs, taskable IDs and dependency records; project descriptions and budgets; objective descriptions and employee IDs; and meeting descriptions and participant identities. Task lists, details, overdue results and bottleneck aggregates apply McpTaskRecordScope before filters/counts/aggregation. Overdue means a non-null due date strictly earlier than the Europe/Bucharest as-of date and status not equal to done. Unknown statuses are preserved as stored. See [MCP operations tools](mcp-operations-tools.md) for full schemas, output fields and date/status semantics.
 
@@ -136,7 +148,7 @@ Issue #532 adds three separate Management-OS staff permissions:
 
 Assign these only to designated human reviewers/auditors. The configured AI principal is explicitly denied access even if it is accidentally assigned one of these permissions. The Filament resources are read-only except for the approve/reject actions; model/service guards preserve the same boundary server-side. See [MCP approval and execution audit controls](mcp-approvals-and-audit.md).
 
-All thirty read-only executive, finance, CRM and operations tools are registered with explicit tool scopes, required and optional domain permissions, record scopes, and output-field allowlists. No write tools are enabled. Each future write tool must use payload-bound approval, an independent human reviewer, execution-time authorization, and an existing domain service.
+All 42 tools are registered with explicit tool scopes, required and optional domain permissions, record scopes, and output-field allowlists. The six #537 business operations are approval-gated: request tools create pending approvals and execution companions accept only approval_id. No other business mutations are exposed. Every future write must use payload-bound approval, an independent human reviewer, execution-time authorization, and an existing domain service.
 
 
 ## Finance tool permission matrix

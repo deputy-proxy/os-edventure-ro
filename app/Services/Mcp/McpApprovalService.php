@@ -9,6 +9,7 @@ use App\Models\Mcp\McpApproval;
 use App\Models\Mcp\McpExecutionAudit;
 use App\Models\User;
 use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -146,6 +147,49 @@ final class McpApprovalService
 
             return $this->assertSameIdempotentPayload($existing, $payloadHash, $oauthClientId);
         }
+    }
+
+    /**
+     * Return an existing idempotent request before domain preview validation runs.
+     *
+     * Preview validation may depend on mutable domain state (for example, active-email
+     * uniqueness). Replaying the same request after a successful execution must return
+     * its original approval/result rather than fail because that execution changed state.
+     *
+     * @param  array<string, mixed>  $arguments
+     */
+    public function existingIdempotentRequest(
+        User $principal,
+        string $toolName,
+        array $arguments,
+        string $idempotencyKey,
+    ): ?McpApproval {
+        $permission = $this->permissions->forTool($toolName);
+        $this->assertApprovalRequiredPermission($permission);
+        $this->authorization->authorizeTool($principal, $permission);
+        $oauthClientId = $this->requiredOAuthClientId();
+
+        if (! preg_match('/^[A-Za-z0-9._:-]{1,128}$/D', $idempotencyKey)) {
+            throw ValidationException::withMessages([
+                'idempotency_key' => 'An opaque idempotency key using 1 to 128 ASCII letters, digits, dots, underscores, colons, or hyphens is required.',
+            ]);
+        }
+
+        $existing = $this->findIdempotentRequest($principal, $idempotencyKey);
+        if ($existing === null) {
+            return null;
+        }
+
+        $payloadHash = $this->canonicalizer->hash(
+            $toolName,
+            (string) config('mcp.permission_matrix_version', '1.0.0'),
+            $existing->target_type,
+            $existing->target_id,
+            $arguments,
+            (array) $existing->preview,
+        );
+
+        return $this->assertSameIdempotentPayload($existing, $payloadHash, $oauthClientId);
     }
 
     public function approve(McpApproval $approval, User $actor, string $reason): McpApproval
@@ -380,7 +424,7 @@ final class McpApprovalService
             $this->assertApprovalRequiredPermission($permission);
             $this->authorization->authorizeTool($principal, $permission);
         } catch (AuthorizationException) {
-            $this->finishFailedExecution($claim, true);
+            $this->finishFailedExecution($claim, true, 'authorization_revoked_before_execution');
 
             throw ValidationException::withMessages([
                 'execution' => 'Current permissions no longer authorize this operation. It was not executed and requires a new approval after access is reviewed.',
@@ -397,8 +441,26 @@ final class McpApprovalService
             if (strlen($encodedResult) > $this->maxPayloadBytes()) {
                 throw new \LengthException('The MCP execution result exceeds the configured size limit.');
             }
+        } catch (AuthorizationException) {
+            $this->finishFailedExecution($claim, true, 'authorization_revoked_before_execution');
+
+            throw ValidationException::withMessages([
+                'execution' => 'Current permissions no longer authorize this operation. It was not executed.',
+            ]);
+        } catch (ModelNotFoundException) {
+            $this->finishFailedExecution($claim, true, 'record_scope_or_state_failed_before_execution');
+
+            throw ValidationException::withMessages([
+                'execution' => 'The approved record is no longer available within the current access scope. No change was made; review the record and request a new approval.',
+            ]);
+        } catch (ValidationException) {
+            $this->finishFailedExecution($claim, true, 'domain_validation_failed_before_execution');
+
+            throw ValidationException::withMessages([
+                'execution' => 'The approved operation is no longer valid and was not executed. Review the current record and request a new approval.',
+            ]);
         } catch (Throwable) {
-            $this->finishFailedExecution($claim, false);
+            $this->finishFailedExecution($claim, false, 'execution_outcome_uncertain');
 
             throw ValidationException::withMessages([
                 'execution' => 'Execution did not return a confirmed outcome. The operation is blocked from automatic retry and requires reconciliation.',
@@ -613,28 +675,24 @@ final class McpApprovalService
     /**
      * @param  array<string, mixed>  $claim
      */
-    private function finishFailedExecution(array $claim, bool $authorizationBlocked): void
+    private function finishFailedExecution(array $claim, bool $blocked, string $errorCode): void
     {
-        DB::transaction(function () use ($claim, $authorizationBlocked): void {
+        DB::transaction(function () use ($claim, $blocked, $errorCode): void {
             $locked = McpApproval::query()->whereKey($claim['approval_id'])->lockForUpdate()->firstOrFail();
 
             if ($locked->status === McpApproval::STATUS_EXECUTING) {
                 $locked->forceFill([
-                    'status' => $authorizationBlocked
+                    'status' => $blocked
                         ? McpApproval::STATUS_EXECUTION_BLOCKED
                         : McpApproval::STATUS_EXECUTION_UNCERTAIN,
-                    'error_code' => $authorizationBlocked
-                        ? 'authorization_revoked_before_execution'
-                        : 'execution_outcome_uncertain',
+                    'error_code' => $errorCode,
                 ])->save();
             }
 
             $executionAudit = McpExecutionAudit::query()->whereKey($claim['audit_id'])->firstOrFail();
             $executionAudit->forceFill([
-                'status' => $authorizationBlocked ? 'failed' : 'uncertain',
-                'error_code' => $authorizationBlocked
-                    ? 'authorization_revoked_before_execution'
-                    : 'execution_outcome_uncertain',
+                'status' => $blocked ? 'failed' : 'uncertain',
+                'error_code' => $errorCode,
                 'completed_at' => now(),
             ])->save();
         });

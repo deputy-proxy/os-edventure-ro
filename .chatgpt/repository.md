@@ -1,6 +1,6 @@
 # Repository-specific development configuration
 
-Last verified: 2026-11-20. Exact resolved versions are recorded in the cross-repository matrix at [Cr8or](https://github.com/deputy-proxy/cr8or/blob/main/.chatgpt/repository-versions.md). Re-check manifests, lockfiles, and workflows before each implementation.
+Last verified: 2026-11-22. Exact resolved versions are recorded in the cross-repository matrix at [Cr8or](https://github.com/deputy-proxy/cr8or/blob/main/.chatgpt/repository-versions.md). Re-check manifests, lockfiles, and workflows before each implementation.
 
 ## Runtime and resolved framework versions
 - PHP constraint: `^8.4.1`; CI uses PHP 8.4.
@@ -26,7 +26,7 @@ Follow the actual current workflow and Composer scripts. At minimum, validate Co
 
 
 ## MCP implementation state
-- Streamable HTTP transport, Passport authorization-code + PKCE, resource/audience binding, dedicated AI principal, and server-side tool authorization are implemented. The capability registry contains six read-only executive tools, nine read-only finance tools, seven read-only CRM/sales tools from #535 and eight read-only operations tools from #536. The versioned permission matrix gates each tool with dedicated OAuth scopes, required/optional HexaLite permissions, record scopes and output field allowlists. Business mutations remain disabled until their individual issues are implemented and tested. CRM and operations schemas and privacy boundaries are documented in docs/mcp-crm-tools.md and docs/mcp-operations-tools.md.
+- Streamable HTTP transport, Passport authorization-code + PKCE, resource/audience binding, dedicated AI principal, and server-side tool authorization are implemented. The registry contains 30 read-only executive, finance, CRM and operations tools plus 12 approval-request/execution tools for six task/CRM operations from #537. The 1.5.0 permission matrix gates every tool with dedicated OAuth scopes, required/optional HexaLite permissions, record scopes and output field allowlists. Request tools create pending approvals only; execution tools accept only approval_id and execute immutable encrypted payloads. CRM and operations contracts are documented in docs/mcp-crm-tools.md and docs/mcp-operations-tools.md. Resources and prompts remain pending #538; HR/products/marketing/academic read coverage remains blocked on domain-owner approval under #539.
 - Issue #532 adds `mcp_approvals` and `mcp_execution_audits`, encrypted operation arguments/previews/results, payload-bound independent human review, single-use execution claims, idempotency, expiry, and stale-execution recovery.
 - Human-only Filament resources: MCP Approvals (`mcp_approval.index`, `mcp_approval.approve`) and MCP Execution Audit (`mcp_execution_audit.index`). The AI principal cannot review its own operations.
 - `mcp:expire-approvals` is scheduled every minute. No MCP-specific audit retention period has been approved; no MCP audit deletion is scheduled.
