@@ -1,7 +1,7 @@
 # Market data structure audit v1
 
 **Status:** Current-state engineering audit; schema changes are not approved by this document  
-**Roadmap:** [Issue #361](https://github.com/deputy-proxy/Management-OS/issues/361)
+**Roadmap:** [Issue #361](https://github.com/deputy-proxy/os-edventure-ro/issues/361)
 
 ## Scope and evidence boundary
 
