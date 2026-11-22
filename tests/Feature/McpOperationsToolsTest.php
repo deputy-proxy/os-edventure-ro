@@ -6,14 +6,17 @@ use App\Mcp\Authorization\McpToolPermissionRegistry;
 use App\Mcp\Server\McpServerFactory;
 use App\Mcp\Tools\Operations\OperationsMcpCapabilityRegistrar;
 use App\Models\Employee;
+use App\Models\Mcp\McpApproval;
 use App\Models\Meeting;
 use App\Models\Project;
 use App\Models\ProjectPhase;
 use App\Models\QuarterlyObjective;
 use App\Models\Task;
 use App\Models\User;
+use App\Services\Mcp\McpApprovalService;
 use Hexters\HexaLite\Models\HexaRole;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Testing\TestResponse;
 use Laravel\Passport\Passport;
@@ -73,7 +76,7 @@ class McpOperationsToolsTest extends TestCase
         parent::tearDown();
     }
 
-    public function test_eight_operations_tools_are_read_only_and_have_closed_schemas(): void
+    public function test_operations_tools_include_read_tools_and_approval_gated_writes_with_closed_schemas(): void
     {
         $this->grant([
             'project.index', 'project_phase.index', 'task.index', 'task.view_all',
@@ -87,13 +90,19 @@ class McpOperationsToolsTest extends TestCase
         $expected = [
             'get_projects', 'get_project_details', 'get_tasks', 'get_task_details',
             'get_overdue_tasks', 'get_operational_bottlenecks', 'get_quarterly_objectives', 'get_meetings',
+            'create_task', 'update_task', 'assign_task', 'complete_task',
+            'execute_create_task', 'execute_update_task', 'execute_assign_task', 'execute_complete_task',
         ];
         $this->assertEqualsCanonicalizing($expected, array_column($tools, 'name'));
         foreach ($tools as $tool) {
             $this->assertFalse($tool['inputSchema']['additionalProperties'] ?? true);
             $permission = (new McpToolPermissionRegistry)->forTool($tool['name']);
-            $this->assertSame('read', $permission->operationType);
-            $this->assertFalse($permission->requiresApproval);
+            if ($permission->operationType === 'read') {
+                $this->assertFalse($permission->requiresApproval);
+            } else {
+                $this->assertSame('write', $permission->operationType);
+                $this->assertTrue($permission->requiresApproval);
+            }
         }
         $taskTools = collect($tools)->whereIn('name', ['get_tasks', 'get_task_details', 'get_overdue_tasks']);
         foreach ($taskTools as $tool) {
@@ -406,6 +415,233 @@ class McpOperationsToolsTest extends TestCase
         $this->assertSame('unavailable_task_not_found', $taskDetail['availability']);
     }
 
+    public function test_task_writes_require_independent_approval_and_execute_the_immutable_payload(): void
+    {
+        $this->grant([
+            'task.create', 'task.update', 'task.assign', 'task.view_all',
+            'project.index', 'project_phase.index',
+        ]);
+        $project = Project::factory()->create();
+        $phase = ProjectPhase::factory()->create(['project_id' => $project->getKey()]);
+        $otherAssignee = User::factory()->create();
+        $session = $this->initialize();
+        $reviewer = $this->reviewer();
+
+        $createArguments = [
+            'action' => 'Prepare the quarterly review',
+            'description' => 'Collect and validate the operating metrics.',
+            'project_id' => $project->getKey(),
+            'project_phase_id' => $phase->getKey(),
+            'due_date' => '2026-12-15',
+            'idempotency_key' => 'task-create-quarterly-review',
+        ];
+        $createResponse = $this->callTool('create_task', $createArguments, $session)->assertOk();
+        $createRequest = $createResponse->json('result.structuredContent');
+        $this->assertIsArray($createRequest, json_encode($createResponse->json()));
+        $createApproval = McpApproval::query()->findOrFail($createRequest['approval_id']);
+        $this->assertSame(McpApproval::STATUS_PENDING, $createApproval->status);
+        $this->assertSame(0, Task::query()->count());
+
+        app(McpApprovalService::class)->approve($createApproval, $reviewer, 'Reviewed the exact task request.');
+        $created = $this->callTool('execute_create_task', [
+            'approval_id' => $createApproval->getKey(),
+        ], $session)->assertOk()->json('result.structuredContent');
+
+        $task = Task::query()->findOrFail($created['task_id']);
+        $this->assertSame('Prepare the quarterly review', $task->action);
+        $this->assertSame('pending', $task->status);
+        $this->assertSame($this->principal->getKey(), $task->assigned_to);
+        $this->assertSame($this->principal->getKey(), $task->created_by);
+        $this->assertSame(McpApproval::STATUS_EXECUTED, $createApproval->fresh()->status);
+
+        $replayed = $this->callTool('execute_create_task', ['approval_id' => $createApproval->getKey()], $session)
+            ->assertOk()->json('result.structuredContent');
+        $this->assertSame($created, $replayed);
+        $this->assertSame(1, Task::query()->count());
+
+        $duplicateRequest = $this->callTool('create_task', $createArguments, $session)
+            ->assertOk()->json('result.structuredContent');
+        $this->assertSame($createApproval->getKey(), $duplicateRequest['approval_id']);
+        $this->assertSame(1, Task::query()->count());
+
+        $updateArguments = [
+            'task_id' => $task->getKey(),
+            'expected_updated_at' => $task->fresh()->updated_at->toIso8601String(),
+            'action' => 'Prepare the approved quarterly review',
+            'status' => 'in_progress',
+            'idempotency_key' => 'task-update-quarterly-review',
+        ];
+        $updateRequest = $this->callTool('update_task', $updateArguments, $session)
+            ->assertOk()->json('result.structuredContent');
+        $updateApproval = McpApproval::query()->findOrFail($updateRequest['approval_id']);
+        $this->assertSame('Prepare the quarterly review', $task->fresh()->action);
+        app(McpApprovalService::class)->approve($updateApproval, $reviewer, 'Reviewed the task title change.');
+        $updated = $this->callTool('execute_update_task', ['approval_id' => $updateApproval->getKey()], $session)
+            ->assertOk()->json('result.structuredContent');
+        $this->assertSame('Prepare the approved quarterly review', $task->fresh()->action);
+        $this->assertSame('in_progress', $task->fresh()->status);
+        $this->assertSame($task->getKey(), $updated['task_id']);
+
+        $assignRequest = $this->callTool('assign_task', [
+            'task_id' => $task->getKey(),
+            'assigned_to' => $otherAssignee->getKey(),
+            'expected_updated_at' => $task->fresh()->updated_at->toIso8601String(),
+            'idempotency_key' => 'task-assign-quarterly-review',
+        ], $session)->assertOk()->json('result.structuredContent');
+        $assignApproval = McpApproval::query()->findOrFail($assignRequest['approval_id']);
+        $this->assertSame($this->principal->getKey(), $task->fresh()->assigned_to);
+        app(McpApprovalService::class)->approve($assignApproval, $reviewer, 'Reviewed the assignment change.');
+        $this->callTool('execute_assign_task', ['approval_id' => $assignApproval->getKey()], $session)->assertOk();
+        $this->assertSame($otherAssignee->getKey(), $task->fresh()->assigned_to);
+
+        $completeRequest = $this->callTool('complete_task', [
+            'task_id' => $task->getKey(),
+            'expected_updated_at' => $task->fresh()->updated_at->toIso8601String(),
+            'idempotency_key' => 'task-complete-quarterly-review',
+        ], $session)->assertOk()->json('result.structuredContent');
+        $completeApproval = McpApproval::query()->findOrFail($completeRequest['approval_id']);
+        $this->assertSame('in_progress', $task->fresh()->status);
+        app(McpApprovalService::class)->approve($completeApproval, $reviewer, 'Reviewed the completion request.');
+        $this->callTool('execute_complete_task', ['approval_id' => $completeApproval->getKey()], $session)->assertOk();
+        $this->assertSame('done', $task->fresh()->status);
+    }
+
+    public function test_task_assignment_preserves_the_existing_eligible_role_policy(): void
+    {
+        $this->grant(['task.update', 'task.assign']);
+        $project = Project::factory()->create();
+        $phase = ProjectPhase::factory()->create(['project_id' => $project->getKey()]);
+        $task = Task::withoutEvents(fn () => Task::factory()->create([
+            'project_id' => $project->getKey(),
+            'project_phase_id' => $phase->getKey(),
+            'assigned_to' => $this->principal->getKey(),
+            'created_by' => $this->principal->getKey(),
+            'status' => 'pending',
+        ]));
+        $eligibleAssignee = User::factory()->create();
+        $ineligibleAssignee = User::factory()->create();
+        $eligibleRole = HexaRole::query()->create([
+            'name' => 'Academician',
+            'created_by_name' => 'Test',
+            'access' => [],
+            'guard' => (string) config('mcp.domain_permission_guard', 'web'),
+        ]);
+        DB::table('hexa_role_user')->insert([
+            'user_id' => $eligibleAssignee->getKey(),
+            'role_id' => $eligibleRole->getKey(),
+        ]);
+        $session = $this->initialize();
+
+        $eligibleRequest = $this->callTool('assign_task', [
+            'task_id' => $task->getKey(),
+            'assigned_to' => $eligibleAssignee->getKey(),
+            'expected_updated_at' => $task->fresh()->updated_at->toIso8601String(),
+            'idempotency_key' => 'task-assign-eligible-user',
+        ], $session)->assertOk()->json('result.structuredContent');
+        $this->assertSame(McpApproval::STATUS_PENDING, McpApproval::query()->findOrFail($eligibleRequest['approval_id'])->status);
+
+        $ineligibleResponse = $this->callTool('assign_task', [
+            'task_id' => $task->getKey(),
+            'assigned_to' => $ineligibleAssignee->getKey(),
+            'expected_updated_at' => $task->fresh()->updated_at->toIso8601String(),
+            'idempotency_key' => 'task-assign-ineligible-user',
+        ], $session)->assertOk();
+        $this->assertArrayHasKey('error', $ineligibleResponse->json());
+        $this->assertSame(1, McpApproval::query()->count());
+        $this->assertSame($this->principal->getKey(), $task->fresh()->assigned_to);
+    }
+
+    public function test_task_approval_is_blocked_when_record_leaves_the_principals_scope(): void
+    {
+        $this->grant(['task.update']);
+        $project = Project::factory()->create();
+        $phase = ProjectPhase::factory()->create(['project_id' => $project->getKey()]);
+        $task = Task::withoutEvents(fn () => Task::factory()->create([
+            'project_id' => $project->getKey(),
+            'project_phase_id' => $phase->getKey(),
+            'assigned_to' => $this->principal->getKey(),
+            'created_by' => $this->principal->getKey(),
+            'action' => 'Original task title',
+            'status' => 'pending',
+        ]));
+        $session = $this->initialize();
+
+        $request = $this->callTool('update_task', [
+            'task_id' => $task->getKey(),
+            'expected_updated_at' => $task->fresh()->updated_at->toIso8601String(),
+            'action' => 'Approved but no longer visible',
+            'idempotency_key' => 'task-update-scope-revoked',
+        ], $session)->assertOk()->json('result.structuredContent');
+        $approval = McpApproval::query()->findOrFail($request['approval_id']);
+        app(McpApprovalService::class)->approve($approval, $this->reviewer(), 'Reviewed the task update.');
+
+        $otherUser = User::factory()->create();
+        $task->forceFill([
+            'assigned_to' => $otherUser->getKey(),
+            'created_by' => $otherUser->getKey(),
+        ])->save();
+
+        $response = $this->callTool('execute_update_task', ['approval_id' => $approval->getKey()], $session)
+            ->assertOk();
+        $this->assertArrayHasKey('error', $response->json());
+        $this->assertSame('Original task title', $task->fresh()->action);
+        $this->assertSame(McpApproval::STATUS_EXECUTION_BLOCKED, $approval->fresh()->status);
+    }
+
+    public function test_stale_task_approval_is_blocked_without_overwriting_the_newer_record(): void
+    {
+        $this->grant(['task.update', 'task.view_all']);
+        $project = Project::factory()->create();
+        $phase = ProjectPhase::factory()->create(['project_id' => $project->getKey()]);
+        $task = Task::withoutEvents(fn () => Task::factory()->create([
+            'project_id' => $project->getKey(),
+            'project_phase_id' => $phase->getKey(),
+            'assigned_to' => $this->principal->getKey(),
+            'created_by' => $this->principal->getKey(),
+            'action' => 'Original task title',
+            'status' => 'pending',
+        ]));
+        $session = $this->initialize();
+
+        $updateResponse = $this->callTool('update_task', [
+            'task_id' => $task->getKey(),
+            'expected_updated_at' => $task->fresh()->updated_at->toIso8601String(),
+            'action' => 'Approved replacement title',
+            'idempotency_key' => 'task-update-stale-version',
+        ], $session)->assertOk();
+        $request = $updateResponse->json('result.structuredContent');
+        $this->assertIsArray($request, json_encode($updateResponse->json()));
+        $approval = McpApproval::query()->findOrFail($request['approval_id']);
+        $reviewer = $this->reviewer();
+        app(McpApprovalService::class)->approve($approval, $reviewer, 'Reviewed the task update.');
+
+        $this->travel(2)->seconds();
+        $task->forceFill(['action' => 'Concurrent human update'])->save();
+
+        $failedExecution = $this->callTool('execute_update_task', ['approval_id' => $approval->getKey()], $session)
+            ->assertOk();
+        $this->assertArrayHasKey('error', $failedExecution->json());
+        $this->assertSame('Concurrent human update', $task->fresh()->action);
+        $this->assertSame(McpApproval::STATUS_EXECUTION_BLOCKED, $approval->fresh()->status);
+    }
+
+    private function reviewer(): User
+    {
+        $reviewer = User::factory()->create(['name' => 'MCP Reviewer']);
+        $role = HexaRole::query()->create([
+            'name' => 'MCP Approval Reviewer',
+            'created_by_name' => 'Test',
+            'access' => ['MCP' => ['mcp_approval.approve']],
+            'guard' => (string) config('mcp.domain_permission_guard', 'web'),
+        ]);
+        DB::table('hexa_role_user')->insert([
+            'user_id' => $reviewer->getKey(),
+            'role_id' => $role->getKey(),
+        ]);
+
+        return $reviewer;
+    }
+
     private function grant(array $permissions): void
     {
         $role = HexaRole::query()->create([
@@ -450,7 +686,12 @@ class McpOperationsToolsTest extends TestCase
     private function mcpPost(array $payload, ?string $session = null): TestResponse
     {
         Passport::actingAs($this->principal, $this->scopes);
-        $server = ['HTTP_ACCEPT' => 'application/json, text/event-stream', 'CONTENT_TYPE' => 'application/json'];
+        $clientClaims = rtrim(strtr(base64_encode(json_encode(['client_id' => 'd8d14d2c-0a80-4f4c-aac8-bb3e67e2a11c'], JSON_THROW_ON_ERROR)), '+/', '-_'), '=');
+        $server = [
+            'HTTP_ACCEPT' => 'application/json, text/event-stream',
+            'CONTENT_TYPE' => 'application/json',
+            'HTTP_AUTHORIZATION' => 'Bearer eyJ0eXAiOiJKV1QifQ.'.$clientClaims.'.test-signature',
+        ];
         if ($session !== null) {
             $server['HTTP_MCP_SESSION_ID'] = $session;
         }

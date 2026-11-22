@@ -1,10 +1,10 @@
 # MCP CRM and sales tools
 
-**Issue:** #535
-**Release:** 2, read-only management intelligence
-**Permission matrix:** 1.3.0
+**Issues:** #535 (read tools), #537 (controlled writes)
+**Release:** 2 read-only management intelligence and 3.1 approval-gated CRM actions
+**Permission matrix:** 1.5.0
 
-The CRM registrar exposes seven read-only tools. Each tool is registered through AuthorizedMcpCapabilityRegistrar, requires its dedicated Passport scope and the listed current HexaLite domain permissions, applies its declared record scope before querying, and returns only the nested field allowlist in config/mcp.php.
+The CRM registrar exposes seven read-only tools and two approval-gated write operations (four request/execution tools). Every tool requires its dedicated Passport scope and current HexaLite domain permissions, applies its declared record scope, and returns only the field allowlist in config/mcp.php.
 
 ## Tool catalogue
 
@@ -29,7 +29,18 @@ All input schemas reject additional properties. Search/list pagination is bounde
 - Lead details return name, status, source category, campaign/referral attribution and timestamps, plus status/attribution history. Email, phone, topic/product interests, privacy-consent metadata, actor identities and converted customer identifiers are excluded. Status and attribution history are capped at 100 entries each; the response includes history counts and history_truncated.
 - Sales-pipeline output is aggregate-only. It does not return lead names or contact details.
 - Customer economics reads existing immutable runs. It returns period and policy version, exception-code counts, and aggregate source-category/currency results. Customer/lead IDs, source references, cost-entry IDs, revenue IDs and raw source snapshots are excluded.
-- No tool creates or changes a customer, lead, contract, interaction, attribution record or unit-economics run.
+- The seven read tools do not create or change a customer, lead, contract, interaction, attribution record or unit-economics run. The two controlled write operations below can create a customer interaction or a new lead only after independent human approval.
+
+## Controlled CRM operations (#537)
+
+| Operation | Request tool | Execution tool | Required permissions |
+| --- | --- | --- | --- |
+| Create customer interaction | `create_customer_interaction` | `execute_create_customer_interaction` | customer.index, customer_interaction.create |
+| Create customer lead | `create_customer_lead` | `execute_create_customer_lead` | customer_lead.create |
+
+Every request requires an idempotency key and creates a pending approval without mutating CRM data. The execution companion accepts only approval_id and executes the encrypted, approved payload. Interaction previews omit free-text descriptions; execution results return only the interaction ID, customer ID, timestamp and rating.
+
+Lead creation validates the existing source-category vocabulary, required contact and interest fields, and active-email uniqueness. The lead status is set to `new`; existing model events continue to record status and attribution history. Email and phone values remain in the encrypted approval payload, are not shown in the approval preview, and are not returned by the execution tool. Lead conversion, contract creation, invoicing, and other CRM mutations remain unavailable.
 
 ## Metric semantics and source limitations
 
@@ -43,6 +54,6 @@ All input schemas reject additional properties. Search/list pagination is bounde
 
 The tools use McpGlobalRecordScope because the underlying customer, contract, interaction and lead index permissions are current all-record visibility gates in the corresponding Filament resources. Contract and interaction tools require both the customer index permission and their specific resource index permission. Customer economics requires its dedicated report-view permission, not the ability to calculate or record costs/retention observations.
 
-Operators must explicitly grant the Assistant role only the reviewed permissions above. The AI principal receives no permissions automatically. No CRM mutation is enabled by this release. Controlled CRM/task writes are separately governed by #537 and the human approval workflow.
+Operators must explicitly grant the Assistant role only the reviewed permissions above. The AI principal receives no permissions automatically. The only CRM mutations enabled by #537 are customer-interaction and customer-lead creation, both governed by the independent human approval workflow.
 
 See MCP permission matrix, MCP server, and MCP integration plan.
