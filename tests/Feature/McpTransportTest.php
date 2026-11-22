@@ -62,7 +62,7 @@ class McpTransportTest extends TestCase
 
         $response->assertOk()
             ->assertJsonPath('jsonrpc', '2.0')
-            ->assertJsonPath('result.serverInfo.name', 'Management-OS')
+            ->assertJsonPath('result.serverInfo.name', 'os-edventure-ro')
             ->assertJsonPath('result.serverInfo.version', '0.1.0');
 
         $this->assertNotEmpty($response->headers->get('Mcp-Session-Id'));
