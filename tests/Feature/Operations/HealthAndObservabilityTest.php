@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schedule;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
+use OpenSSLAsymmetricKey;
 use RuntimeException;
 use Tests\TestCase;
 
@@ -16,11 +17,61 @@ class HealthAndObservabilityTest extends TestCase
 {
     use RefreshDatabase;
 
+    /** @var list<string> */
+    private array $passportKeyFiles = [];
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $key = openssl_pkey_new(['private_key_bits' => 2048, 'private_key_type' => OPENSSL_KEYTYPE_RSA]);
+        $this->assertInstanceOf(OpenSSLAsymmetricKey::class, $key);
+        $this->assertTrue(openssl_pkey_export($key, $privateKey));
+        $details = openssl_pkey_get_details($key);
+        $this->assertIsArray($details);
+        $this->assertIsString($details['key'] ?? null);
+
+        $privatePath = tempnam(sys_get_temp_dir(), 'readiness-private-');
+        $publicPath = tempnam(sys_get_temp_dir(), 'readiness-public-');
+        $this->assertIsString($privatePath);
+        $this->assertIsString($publicPath);
+
+        file_put_contents($privatePath, $privateKey);
+        file_put_contents($publicPath, $details['key']);
+        chmod($privatePath, 0600);
+        chmod($publicPath, 0600);
+        $this->passportKeyFiles = [$privatePath, $publicPath];
+
+        config([
+            'passport.private_key' => 'file://'.$privatePath,
+            'passport.public_key' => 'file://'.$publicPath,
+        ]);
+    }
+
+    protected function tearDown(): void
+    {
+        foreach ($this->passportKeyFiles as $path) {
+            @unlink($path);
+        }
+
+        parent::tearDown();
+    }
+
     public function test_readiness_returns_a_minimal_success_response_when_database_is_available(): void
     {
         $this->getJson('/ready')
             ->assertOk()
             ->assertExactJson(['status' => 'ready']);
+    }
+
+    public function test_readiness_fails_when_a_passport_key_has_insecure_permissions(): void
+    {
+        chmod($this->passportKeyFiles[1], 0644);
+
+        $this->getJson('/ready')
+            ->assertStatus(503)
+            ->assertExactJson(['status' => 'not_ready'])
+            ->assertDontSee('oauth-public.key');
     }
 
     public function test_readiness_hides_database_failure_details(): void

@@ -14,7 +14,7 @@ The repository exposes a remote Model Context Protocol (MCP) endpoint at /mcp us
 
 - MCP POST requests require a Laravel Passport OAuth access token with the `mcp:use` scope. Each business tool additionally requires its dedicated OAuth tool scope and the configured AI principal; source-level data is filtered by the principal's current HexaLite permissions. Dynamic registration advertises every tool scope from the permission matrix to the client so ChatGPT can request the scopes used by discovered tools. Existing OAuth clients created before this behavior must be registered again.
 - Controlled writes are limited to the six #537 task/CRM operations. Request tools create pending approvals only; execution tools accept only approval_id and dispatch the exact encrypted, payload-bound arguments. All six operations require independent human review, execution-time authorization, and idempotency. No lead conversion, payroll, invoice issuance, financial correction/reversal, or user/role administration mutation is exposed.
-- The endpoint is not yet verified against the production reverse proxy/hosting environment or a live ChatGPT workspace.
+- The `/ready` endpoint verifies database connectivity and both Passport signing keys, including file permissions, before returning `ready`. The endpoint is not yet verified against the production reverse proxy/hosting environment or a live ChatGPT workspace.
 
 ## Implementation
 
@@ -28,7 +28,7 @@ OAuth uses the same provider and Laravel integration as deputy-proxy/cr8or:
 - The api guard uses Passport; MCP POST requests require auth:api and the mcp:use scope.
 - OAuth clients are public authorization-code clients. The ChatGPT callback allowlist defaults to https://chatgpt.com; configure MCP_OAUTH_REDIRECT_DOMAINS as an explicit comma-separated allowlist. Never use a wildcard.
 - Access tokens expire after 60 minutes and refresh tokens after 30 days by default.
-- Generate Passport signing keys once per environment with php artisan passport:keys --force. Keep the private key outside source control.
+- Generate Passport signing keys once per environment with `php artisan passport:keys --force`. Keep the private key outside source control. Composer post-autoload deployment hooks restrict existing file-backed Passport key files to mode `0600` without rotating or changing key material. Keep `APP_DEBUG=false` in production.
 - The authorization endpoint enforces PKCE S256 and requires the exact `resource=https://<host>/mcp` parameter. The token endpoint requires the same resource value and echoes it in successful token responses. Issued JWTs include the configured issuer and the MCP resource in `aud`; the OAuth client identifier is retained as the first audience entry for Passport's resource-server guard. CORS preflight remains unauthenticated; MCP POST requests are authenticated and scope-checked. Unauthorized responses include a WWW-Authenticate resource-metadata challenge.
 - The current lockfile resolves laravel/passport v13.12.0 and laravel/mcp v1.2.1; CR8OR uses the same Passport provider with earlier package releases.
 

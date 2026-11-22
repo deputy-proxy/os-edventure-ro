@@ -44,8 +44,11 @@ The source of truth is **config/mcp.php** and **.env.example**.
 | **MCP_EXECUTION_STALE_MINUTES** | 5 | Age after which interrupted execution is marked uncertain. |
 | **MCP_SERVER_NAME** | Management-OS | MCP server identity shown to clients. |
 | **MCP_SERVER_VERSION** | 0.1.0 | MCP server version metadata. |
+| **APP_DEBUG** | `false` in .env.example | Must remain `false` in production so exception traces and filesystem paths are not disclosed. |
 
-APP_URL, APP_KEY, database settings, and Passport signing keys are also required by Laravel. Keep .env, APP_KEY, storage/oauth-private.key, and all environment credentials outside source control. Protect the Passport private key and include it in the environment's approved secure key-backup process.
+APP_URL, APP_KEY, database settings, and Passport signing keys are also required by Laravel. Keep .env, APP_KEY, storage/oauth-private.key, and all environment credentials outside source control. Protect the Passport private key and include it in the environment's approved secure key-backup process. Keep `APP_DEBUG=false` in production; the committed `.env.example` uses this safe default.
+
+The `/ready` endpoint checks database connectivity and validates both Passport signing keys, including their file permissions; it returns `503 not_ready` when either dependency is unhealthy. Composer's `post-autoload-dump` hook applies mode `0600` to existing file-backed Passport private/public keys after dependency installation. It never generates, rotates, reads, or changes key contents. If a deployment still reports a Passport key permission error, repair the existing files over SSH from the application root with `chmod 600 storage/oauth-private.key storage/oauth-public.key`, then refresh Laravel's cached configuration with `php artisan config:clear && php artisan config:cache`. Verify modes with `stat -c '%a %n' storage/oauth-private.key storage/oauth-public.key`; both should report `600`. Do not run `passport:keys --force` as a permissions repair because it replaces the signing keys and invalidates existing tokens.
 The MCP route is limited to 60 requests per minute per source IP. The default request-body limit is 1 MiB and the non-CLI application timeout cap is 25 seconds. These application limits do not override lower reverse-proxy, PHP-FPM, CDN, or hosting limits.
 
 ## 3. Local development and protocol inspection
@@ -175,7 +178,7 @@ See [MCP approval and execution audit controls](mcp-approvals-and-audit.md) for 
 Before enabling the endpoint for a real workspace, verify in the target environment:
 
 - public HTTPS, certificate validity, canonical APP_URL, OAuth issuer, host allowlist, and redirect-origin allowlist;
-- Passport signing keys, APP_KEY, and environment secrets are stored securely and backed up under the approved key-management process;
+- Passport signing keys, APP_KEY, and environment secrets are stored securely, Passport key files use mode `0600`, and production `APP_DEBUG=false` is verified;
 - deployed PHP/database versions and required extensions satisfy the committed manifests;
 - the reverse proxy/CDN passes Streamable HTTP responses without buffering or truncation that breaks the protocol;
 - effective PHP-FPM, web-server, CDN, and platform timeouts are compatible with the application request cap;
@@ -227,6 +230,8 @@ Before a PR, follow the current .github/workflows/tests.yml and [AI development 
 | --- | --- |
 | OAuth discovery fails | Check public APP_URL, MCP_AUTHORIZATION_SERVER, HTTPS/reverse-proxy forwarding, and both /.well-known metadata endpoints. |
 | Redirect URI rejected | Compare the exact callback origin with MCP_OAUTH_REDIRECT_DOMAINS; do not use a wildcard. |
+| OAuth/MCP endpoint returns HTTP 500 mentioning Passport key permissions | Check `storage/oauth-private.key` and `storage/oauth-public.key` modes; set both to `0600`, then clear and rebuild Laravel config cache. Do not regenerate keys as a permissions fix. |
+| Production error response contains a stack trace | Set `APP_DEBUG=false` in the production environment and rebuild Laravel config cache. |
 | Token rejected | Confirm the token is current, contains mcp:use and the tool-specific scope, and has the /mcp resource audience. |
 | Tool absent after a server update | Refresh/review the ChatGPT app's discovered actions; workspace definitions may be a frozen snapshot. |
 | Tool call denied | Check the dedicated OAuth scope, configured AI principal, Assistant role, required domain permissions, record scope, and current token state. Do not solve denial by granting Owner/superadmin. |
