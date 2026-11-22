@@ -13,7 +13,7 @@ The remote MCP endpoint is **/mcp** and uses Streamable HTTP. The current regist
 
 The server also exposes five permission-aware read-only resources and five prompt templates. Prompts do not fetch data or grant permissions; each tool/resource call is independently authorized.
 
-Every tool requires its dedicated OAuth scope and the configured AI principal. Required/optional HexaLite permissions, record scopes, and nested output-field allowlists are enforced server-side. The AI principal must never receive Owner, superadmin, or blanket administrator privileges.
+Every tool requires its dedicated OAuth scope and the configured AI principal. Dynamic client registration advertises and allows the complete scope set from the permission matrix so ChatGPT can request the scopes needed by discovered tools; the issued token must still contain the individual tool scope. Required/optional HexaLite permissions, record scopes, and nested output-field allowlists are enforced server-side. The AI principal must never receive Owner, superadmin, or blanket administrator privileges.
 
 The six task/CRM operations are not direct writes from the initial request. A request creates a pending approval containing an immutable encrypted payload. A separate eligible human reviewer must approve the exact payload in the Management-OS panel. The execution tool accepts only the approval ID and rechecks authorization before calling the existing domain action. ChatGPT's conversational confirmation is not a substitute for this approval.
 
@@ -74,7 +74,7 @@ The local endpoint is http://127.0.0.1:8000/mcp. OAuth discovery is exposed at:
 - /.well-known/oauth-authorization-server
 - /.well-known/oauth-protected-resource
 
-MCP POST requests require a Passport bearer token with mcp:use and the tool-specific scope. Metadata advertises authorization-code and refresh-token grants. The implementation requires PKCE S256 and validates the OAuth resource parameter against /mcp.
+MCP POST requests require a Passport bearer token with mcp:use and the tool-specific scope. Dynamic registration returns the full set of matrix scopes; ChatGPT can then request each tool scope during authorization. Metadata advertises authorization-code and refresh-token grants. The implementation requires PKCE S256 and validates the OAuth resource parameter against /mcp. Existing clients registered before this behavior retain their previous scope allowlist and must be disconnected and registered again to obtain the expanded scopes.
 
 For the web MCP Inspector, run **npx @modelcontextprotocol/inspector**, select Streamable HTTP, and enter the local endpoint. Use its OAuth flow. Add only the exact callback origin shown by the Inspector to MCP_OAUTH_REDIRECT_DOMAINS in local .env; never use a wildcard. The Inspector's unauthenticated CLI commands are not suitable for this protected endpoint.
 

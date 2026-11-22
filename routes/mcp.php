@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Mcp\McpController;
+use App\Http\Controllers\Mcp\McpOAuthRegisterController;
 use App\Http\Middleware\CaptureMcpAuditContext;
 use App\Http\Middleware\RequireMcpPkceS256;
 use App\Http\Middleware\RequireMcpResource;
@@ -34,7 +35,8 @@ Route::get('/.well-known/oauth-protected-resource', static fn () => response()->
     'scopes_supported' => $scopes(),
 ]))->name('mcp.oauth.protected-resource');
 
-Mcp::oauthRoutes();
+Mcp::oauthRoutes(registration: false);
+Route::post('/oauth/register', McpOAuthRegisterController::class)->name('mcp.oauth.register');
 
 // The package also registers a nested protected-resource endpoint used by
 // the MCP WWW-Authenticate challenge. Override it as well, or clients would

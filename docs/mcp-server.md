@@ -12,7 +12,7 @@ The repository exposes a remote Model Context Protocol (MCP) endpoint at /mcp us
 - Finance tools: get_financial_overview, get_transactions, get_receivables, get_payables, get_cash_forecast, get_budget_vs_actuals, get_profitability_report, get_reconciliation_status and get_invoice_details.
 - Extended domain tools: five HR/payroll, three product, three marketing and three academic read tools from #539.
 
-- MCP POST requests require a Laravel Passport OAuth access token with the `mcp:use` scope. Each business tool additionally requires its dedicated OAuth tool scope and the configured AI principal; source-level data is filtered by the principal's current HexaLite permissions.
+- MCP POST requests require a Laravel Passport OAuth access token with the `mcp:use` scope. Each business tool additionally requires its dedicated OAuth tool scope and the configured AI principal; source-level data is filtered by the principal's current HexaLite permissions. Dynamic registration advertises every tool scope from the permission matrix to the client so ChatGPT can request the scopes used by discovered tools. Existing OAuth clients created before this behavior must be registered again.
 - Controlled writes are limited to the six #537 task/CRM operations. Request tools create pending approvals only; execution tools accept only approval_id and dispatch the exact encrypted, payload-bound arguments. All six operations require independent human review, execution-time authorization, and idempotency. No lead conversion, payroll, invoice issuance, financial correction/reversal, or user/role administration mutation is exposed.
 - The endpoint is not yet verified against the production reverse proxy/hosting environment or a live ChatGPT workspace.
 
@@ -24,7 +24,7 @@ The transport uses the official PHP MCP SDK `mcp/sdk` v0.10.0. Composer's `compo
 OAuth uses the same provider and Laravel integration as deputy-proxy/cr8or:
 
 - laravel/passport provides the OAuth 2 authorization server and token validation.
-- laravel/mcp provides protected-resource metadata, authorization-server discovery, and dynamic client registration through Mcp::oauthRoutes().
+- laravel/mcp provides protected-resource metadata and authorization-server discovery. The application uses its OAuth registration controller with a Management-OS wrapper so each dynamic Passport client is allowed the complete tool-scope set from the runtime permission matrix; the generic package default would register only `mcp:use`, which is insufficient for per-tool authorization.
 - The api guard uses Passport; MCP POST requests require auth:api and the mcp:use scope.
 - OAuth clients are public authorization-code clients. The ChatGPT callback allowlist defaults to https://chatgpt.com; configure MCP_OAUTH_REDIRECT_DOMAINS as an explicit comma-separated allowlist. Never use a wildcard.
 - Access tokens expire after 60 minutes and refresh tokens after 30 days by default.
