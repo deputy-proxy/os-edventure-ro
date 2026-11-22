@@ -44,7 +44,7 @@ class McpTransportTest extends TestCase
         parent::tearDown();
     }
 
-    public function test_streamable_http_initializes_a_session_and_advertises_management_os(): void
+    public function test_streamable_http_initializes_a_session_and_advertises_os_edventure_ro(): void
     {
         $response = $this->mcpPost([
             'jsonrpc' => '2.0',
