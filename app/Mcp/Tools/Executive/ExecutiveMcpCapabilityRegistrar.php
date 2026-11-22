@@ -124,6 +124,24 @@ final class ExecutiveMcpCapabilityRegistrar extends AuthorizedMcpCapabilityRegis
     }
 
     /** @return array<string, mixed> */
+    public function resourceExecutiveOverview(User $principal): array
+    {
+        return $this->executiveOverview($principal);
+    }
+
+    /** @return array<string, mixed> */
+    public function resourceManagementKpis(User $principal): array
+    {
+        return $this->managementKpis($principal);
+    }
+
+    /** @return array<string, mixed> */
+    public function resourceManagementPriorities(User $principal): array
+    {
+        return $this->managementPriorities($principal, []);
+    }
+
+    /** @return array<string, mixed> */
     private function executiveOverview(User $principal): array
     {
         return $this->withPrincipalContext($principal, function () use ($principal): array {

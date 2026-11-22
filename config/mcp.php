@@ -6,6 +6,7 @@ use App\Mcp\Authorization\Scopes\McpTaskRecordScope;
 use App\Mcp\Tools\Crm\CrmMcpCapabilityRegistrar;
 use App\Mcp\Tools\Executive\ExecutiveMcpCapabilityRegistrar;
 use App\Mcp\Tools\Finance\FinanceMcpCapabilityRegistrar;
+use App\Mcp\Tools\Management\ManagementMcpCapabilityRegistrar;
 use App\Mcp\Tools\Operations\OperationsMcpCapabilityRegistrar;
 
 $applicationHost = parse_url((string) env('APP_URL', 'http://localhost'), PHP_URL_HOST) ?: 'localhost';
@@ -82,6 +83,7 @@ return [
         FinanceMcpCapabilityRegistrar::class,
         CrmMcpCapabilityRegistrar::class,
         OperationsMcpCapabilityRegistrar::class,
+        ManagementMcpCapabilityRegistrar::class,
     ],
     'tool_permissions' => [
         'get_executive_overview' => [

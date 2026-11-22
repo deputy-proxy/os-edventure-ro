@@ -53,6 +53,12 @@ final class FinanceMcpCapabilityRegistrar extends AuthorizedMcpCapabilityRegistr
         }
     }
 
+    /** @return array<string, mixed> */
+    public function resourceFinancialOverview(User $user): array
+    {
+        return $this->overview($user);
+    }
+
     private function has(User $user, string $permission): bool
     {
         return $this->authorization->hasDomainPermission($user, $permission);
