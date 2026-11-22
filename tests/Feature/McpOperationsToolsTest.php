@@ -206,6 +206,9 @@ class McpOperationsToolsTest extends TestCase
 
     public function test_bottleneck_aggregates_use_the_same_task_record_scope_as_task_lists(): void
     {
+        // Keep the fixed November fixtures stable regardless of the CI runner's current date.
+        $this->travelTo(now()->setDate(2026, 11, 20)->startOfDay());
+
         $other = User::factory()->create();
         $this->grant(['task.index', 'project.index', 'project_phase.index']);
         $this->actingAs($this->principal);
