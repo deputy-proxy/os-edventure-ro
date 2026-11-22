@@ -1,13 +1,14 @@
 <?php
 
-namespace Tests\\Feature;
+namespace Tests\Feature;
 
-use Filament\\Tables\\Table;
-use Hexters\\HexaLite\\Models\\HexaRole;
-use Hexters\\HexaLite\\Resources\\Roles\\Widgets\\RoleUsersWidget;
-use Illuminate\\Database\\Eloquent\\Builder;
-use Illuminate\\Foundation\\Testing\\RefreshDatabase;
-use Tests\\TestCase;
+use App\Models\User;
+use Filament\Tables\Table;
+use Hexters\HexaLite\Models\HexaRole;
+use Hexters\HexaLite\Resources\Roles\Widgets\RoleUsersWidget;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
 
 class RoleUsersWidgetTest extends TestCase
 {
@@ -21,7 +22,7 @@ class RoleUsersWidgetTest extends TestCase
             'access' => [],
             'guard' => hexa()->guard(),
         ]);
-        $user = \\App\\Models\\User::factory()->create();
+        $user = User::factory()->create();
         $role->users()->attach($user);
 
         $widget = new RoleUsersWidget;
