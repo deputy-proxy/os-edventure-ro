@@ -2,7 +2,7 @@
 
 **Policy version:** `v1`  
 **Effective date:** 2026-10-27  
-**Scope:** Manual competitor-offer observations in Management-OS.
+**Scope:** Manual competitor-offer observations in os-edventure-ro.
 
 ## Record model
 
