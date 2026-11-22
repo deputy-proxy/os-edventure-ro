@@ -122,7 +122,7 @@ final class ManagementMcpCapabilityRegistrar extends AuthorizedMcpCapabilityRegi
                             $body .= "\nRequested context: {$context}.\n";
                         }
 
-                        $body .= "\nUse only live results returned by the available Management-OS MCP tools. Call each relevant tool before making factual claims. Tool availability and authorization are determined at call time; do not infer that a tool is permitted merely because this prompt is available. Report denied, missing, stale, unsupported or unresolved sources explicitly. Do not substitute zero for unknown, combine currencies, reconstruct unsupported historical periods, infer an approval, or invent a score. Clearly separate source facts from analysis and identify each source, as-of time, period, timezone, unit and freshness where supplied.";
+                        $body .= "\nUse only live results returned by the available os-edventure-ro MCP tools. Call each relevant tool before making factual claims. Tool availability and authorization are determined at call time; do not infer that a tool is permitted merely because this prompt is available. Report denied, missing, stale, unsupported or unresolved sources explicitly. Do not substitute zero for unknown, combine currencies, reconstruct unsupported historical periods, infer an approval, or invent a score. Clearly separate source facts from analysis and identify each source, as-of time, period, timezone, unit and freshness where supplied.";
 
                         return [
                             'role' => 'user',
