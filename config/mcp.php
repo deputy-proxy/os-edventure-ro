@@ -5,6 +5,7 @@ use App\Mcp\Authorization\Scopes\McpOwnedRecordScope;
 use App\Mcp\Authorization\Scopes\McpTaskRecordScope;
 use App\Mcp\Tools\Crm\CrmMcpCapabilityRegistrar;
 use App\Mcp\Tools\Executive\ExecutiveMcpCapabilityRegistrar;
+use App\Mcp\Tools\Extended\ExtendedDomainMcpCapabilityRegistrar;
 use App\Mcp\Tools\Finance\FinanceMcpCapabilityRegistrar;
 use App\Mcp\Tools\Management\ManagementMcpCapabilityRegistrar;
 use App\Mcp\Tools\Operations\OperationsMcpCapabilityRegistrar;
@@ -75,7 +76,7 @@ $kpiResultFields = [
 return [
     'authorization_server' => $authorizationServer === '' ? null : rtrim($authorizationServer, '/'),
     'ai_principal_email' => env('MCP_AI_PRINCIPAL_EMAIL'),
-    'permission_matrix_version' => '1.5.0',
+    'permission_matrix_version' => '1.6.0',
     'domain_permission_guard' => env('MCP_DOMAIN_PERMISSION_GUARD', config('auth.defaults.guard', 'web')),
     'principal_role' => 'Assistant',
     'capability_registrars' => [
@@ -83,6 +84,7 @@ return [
         FinanceMcpCapabilityRegistrar::class,
         CrmMcpCapabilityRegistrar::class,
         OperationsMcpCapabilityRegistrar::class,
+        ExtendedDomainMcpCapabilityRegistrar::class,
         ManagementMcpCapabilityRegistrar::class,
     ],
     'tool_permissions' => [
@@ -444,6 +446,77 @@ return [
         'get_invoice_details' => [
             'mcp_scope' => 'mcp.finance.invoice.read', 'operation_type' => 'read', 'domain_permissions' => ['receivables-payables.view'], 'optional_domain_permissions' => ['customer_invoice.index', 'vendor_invoice.index', 'transaction.index'], 'record_scope' => McpGlobalRecordScope::class,
             'allowed_fields' => ['availability' => true, 'as_of' => true, 'timezone' => true, 'invoice' => ['source_type' => true, 'source_reference' => true, 'document_date' => true, 'due_date' => true, 'currency_code' => true, 'invoice_total' => true, 'confirmed_allocated' => true, 'outstanding_amount' => true, 'credit_amount' => true, 'balance_status' => true, 'payment_state' => true, 'aging_bucket' => true, 'days_overdue' => true, 'allocation_count' => true, 'pending_allocation_count' => true, 'reversed_allocation_count' => true, 'reason_codes' => true, 'document_status' => true, 'source_status' => true, 'payable_amount_availability' => true, 'payment_data_availability' => true]],
+        ],
+
+        'get_hr_overview' => [
+            'mcp_scope' => 'mcp.hr.overview.read', 'operation_type' => 'read',
+            'domain_permissions' => ['employee.index'], 'record_scope' => McpGlobalRecordScope::class,
+            'allowed_fields' => ['as_of' => true, 'timezone' => true, 'current_employee_count' => true, 'deleted_employee_count' => true, 'scope' => true],
+        ],
+        'get_approved_evaluation_summary' => [
+            'mcp_scope' => 'mcp.hr.evaluations.read', 'operation_type' => 'read',
+            'domain_permissions' => ['employee_evaluation.index'], 'record_scope' => McpGlobalRecordScope::class,
+            'allowed_fields' => ['as_of' => true, 'approved_evaluations' => ['evaluation_year' => true, 'approved_count' => true, 'average_final_score' => true], 'suppressed_year_buckets' => true, 'minimum_cohort_size' => true, 'scope' => true],
+        ],
+        'get_timesheet_status' => [
+            'mcp_scope' => 'mcp.hr.timesheets.read', 'operation_type' => 'read',
+            'domain_permissions' => ['employee_timesheet.index'], 'record_scope' => McpGlobalRecordScope::class,
+            'allowed_fields' => ['from' => true, 'to' => true, 'timezone' => true, 'total_entries' => true, 'total_recorded_hours' => true, 'categories' => ['category' => true, 'entry_count' => true, 'recorded_hours' => true], 'suppressed_category_count' => true, 'minimum_cohort_size' => true, 'scope' => true],
+        ],
+        'get_payroll_period_status' => [
+            'mcp_scope' => 'mcp.hr.payroll-periods.read', 'operation_type' => 'read',
+            'domain_permissions' => ['employee_pay_slip.index'], 'record_scope' => McpGlobalRecordScope::class,
+            'allowed_fields' => ['as_of' => true, 'periods' => ['period' => true, 'status' => true, 'approval_status' => true, 'record_count' => true], 'suppressed_period_buckets' => true, 'minimum_cohort_size' => true],
+        ],
+        'get_payroll_validation_exceptions' => [
+            'mcp_scope' => 'mcp.hr.payroll-exceptions.read', 'operation_type' => 'read',
+            'domain_permissions' => ['payroll_exception.index'], 'record_scope' => McpGlobalRecordScope::class,
+            'allowed_fields' => ['as_of' => true, 'exceptions' => ['period_start' => true, 'period_end' => true, 'severity' => true, 'status' => true, 'code' => true, 'count' => true], 'suppressed_exception_buckets' => true, 'minimum_cohort_size' => true],
+        ],
+        'get_product_catalogue' => [
+            'mcp_scope' => 'mcp.products.catalogue.read', 'operation_type' => 'read',
+            'domain_permissions' => ['product.index'], 'record_scope' => McpGlobalRecordScope::class,
+            'allowed_fields' => ['as_of' => true, 'total' => true, 'returned_count' => true, 'truncated' => true, 'with_effective_price' => true, 'missing_price' => true, 'ambiguous_price' => true, 'products' => ['title' => true, 'status' => true, 'type' => true, 'productable_title' => true, 'price_state' => true, 'price' => true, 'currency' => true, 'availability' => true, 'valid_from' => true, 'valid_until' => true], 'price_semantics' => true],
+        ],
+        'get_product_cost_summary' => [
+            'mcp_scope' => 'mcp.products.costs.read', 'operation_type' => 'read',
+            'domain_permissions' => ['product_cost.index'], 'record_scope' => McpGlobalRecordScope::class,
+            'allowed_fields' => ['as_of' => true, 'costs' => ['month' => true, 'currency_code' => true, 'allocated_cost' => true, 'allocation_count' => true, 'basis' => true], 'legacy_cost_rows' => true, 'legacy_costs' => true],
+        ],
+        'get_product_profitability' => [
+            'mcp_scope' => 'mcp.products.profitability.read', 'operation_type' => 'read',
+            'domain_permissions' => ['product.index', 'finance-profitability.view'], 'record_scope' => McpGlobalRecordScope::class,
+            'allowed_fields' => ['availability' => true, 'run_created_at' => true, 'period_start' => true, 'period_end' => true, 'run_status' => true, 'currency_totals' => ['currency_code' => true, 'revenue_amount' => true, 'direct_cost_amount' => true, 'overhead_cost_amount' => true, 'provisional_profit_amount' => true, 'provisional_margin_percent' => true, 'result_count' => true, 'complete' => true], 'exception_count' => true, 'project_dimension' => ['available' => true, 'reason' => true], 'customer_details_available' => true, 'basis' => true],
+        ],
+        'get_campaign_performance' => [
+            'mcp_scope' => 'mcp.marketing.campaign-performance.read', 'operation_type' => 'read',
+            'domain_permissions' => ['paid_campaign.index'], 'record_scope' => McpGlobalRecordScope::class,
+            'allowed_fields' => ['as_of' => true, 'paid_campaigns' => ['current_count' => true, 'status_buckets' => ['value' => true, 'count' => true], 'upcoming_count' => true, 'recent_published_count' => true], 'google_ads' => ['from' => true, 'to' => true, 'row_count' => true, 'campaign_count' => true, 'latest_imported_at' => true, 'currency_totals' => ['currency_code' => true, 'impressions' => true, 'clicks' => true, 'cost_micros' => true, 'conversions' => true], 'campaign_rows' => ['campaign_id' => true, 'campaign_name' => true, 'currency_code' => true, 'impressions' => true, 'clicks' => true, 'cost_micros' => true, 'conversions' => true], 'source' => true, 'unit_notes' => true]],
+        ],
+        'get_google_ads_import_status' => [
+            'mcp_scope' => 'mcp.marketing.google-ads-imports.read', 'operation_type' => 'read',
+            'domain_permissions' => ['paid_campaign.index'], 'record_scope' => McpGlobalRecordScope::class,
+            'allowed_fields' => ['as_of' => true, 'configurations' => ['active' => true, 'status' => true, 'last_status' => true, 'last_checked_at' => true, 'last_error_code' => true, 'batch_count' => true], 'batches' => ['period_start' => true, 'period_end' => true, 'source' => true, 'source_version' => true, 'status' => true, 'row_count' => true, 'error_code' => true, 'started_at' => true, 'completed_at' => true], 'privacy_note' => true],
+        ],
+        'get_market_observations' => [
+            'mcp_scope' => 'mcp.marketing.market-observations.read', 'operation_type' => 'read',
+            'domain_permissions' => ['competitor_offer.index', 'market_trend.index'], 'record_scope' => McpGlobalRecordScope::class,
+            'allowed_fields' => ['as_of' => true, 'market_trends' => ['name' => true, 'category' => true, 'metric_key' => true, 'value' => true, 'unit' => true, 'market' => true, 'segment' => true, 'period_start' => true, 'period_end' => true, 'source_name' => true, 'source_url' => true, 'observed_at' => true, 'change_pct' => true, 'confidence' => true, 'data_status' => true, 'source_type' => true, 'freshness_status' => true, 'verification_status' => true, 'source_reference' => true, 'source_revision' => true, 'missing_reason' => true, 'methodology' => true], 'competitor_observations' => ['title' => true, 'offer_type' => true, 'offer_price' => true, 'currency' => true, 'price_basis' => true, 'source_url' => true, 'valid_from' => true, 'valid_until' => true, 'observed_at' => true, 'source_status' => true], 'market_trends_source_note' => true],
+        ],
+        'get_academic_overview' => [
+            'mcp_scope' => 'mcp.academic.overview.read', 'operation_type' => 'read',
+            'domain_permissions' => ['student.index', 'group.index', 'session.index'], 'record_scope' => McpGlobalRecordScope::class,
+            'allowed_fields' => ['as_of' => true, 'timezone' => true, 'student_count' => true, 'current_group_memberships' => true, 'groups_with_current_memberships' => true, 'enrollment_trend' => ['date' => true, 'count' => true], 'group_count' => true, 'scheduled_sessions_30_days' => true, 'assigned_sessions_30_days' => true, 'unassigned_sessions_30_days' => true, 'scope' => true],
+        ],
+        'get_attendance_summary' => [
+            'mcp_scope' => 'mcp.academic.attendance.read', 'operation_type' => 'read',
+            'domain_permissions' => ['session_attendance.index', 'session.index'], 'record_scope' => McpGlobalRecordScope::class,
+            'allowed_fields' => ['from' => true, 'to' => true, 'timezone' => true, 'attendance_count' => true, 'status_buckets' => ['status' => true, 'count' => true], 'suppressed_status_buckets' => true, 'minimum_cohort_size' => true, 'scope' => true],
+        ],
+        'get_group_operations' => [
+            'mcp_scope' => 'mcp.academic.groups.read', 'operation_type' => 'read',
+            'domain_permissions' => ['group.index', 'session.index'], 'record_scope' => McpGlobalRecordScope::class,
+            'allowed_fields' => ['as_of' => true, 'groups_by_status' => ['status' => true, 'count' => true], 'sessions_by_type_and_status' => ['session_type' => true, 'status' => true, 'count' => true], 'scope' => true],
         ],
         'create_task' => [
             'mcp_scope' => 'mcp.operations.tasks.create', 'operation_type' => 'write', 'requires_approval' => true,
