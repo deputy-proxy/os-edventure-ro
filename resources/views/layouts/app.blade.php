@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
     <meta name="application-name" content="EdVenture">
-    <title>{{ $title ?? 'EdVenture Management OS' }}</title>
+    <title>{{ $title ?? 'EdVenture os-edventure-ro' }}</title>
     <meta name="description" content="{{ $description ?? 'EdVenture School este o școală de limbi străine ce cultivă pasiunea pentru învățarea limbilor străine, de 20 ani.' }}">
     
     <!-- Open Graph & Meta Tags -->
