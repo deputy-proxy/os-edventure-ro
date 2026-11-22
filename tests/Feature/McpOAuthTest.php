@@ -136,7 +136,7 @@ class McpOAuthTest extends TestCase
             'resource' => url('/mcp'),
             'response_type' => 'code',
             'scope' => implode(' ', $requestedScopes),
-            'state' => 'management-os-state',
+            'state' => 'os-edventure-ro-state',
             'code_challenge' => $challenge,
             'code_challenge_method' => 'S256',
         ]))->assertOk();
@@ -150,7 +150,7 @@ class McpOAuthTest extends TestCase
         ])->assertRedirect();
 
         parse_str((string) parse_url((string) $approval->headers->get('Location'), PHP_URL_QUERY), $redirectQuery);
-        $this->assertSame('management-os-state', $redirectQuery['state'] ?? null);
+        $this->assertSame('os-edventure-ro-state', $redirectQuery['state'] ?? null);
 
         $tokenRequest = [
             'grant_type' => 'authorization_code',
@@ -210,7 +210,7 @@ class McpOAuthTest extends TestCase
         ], [
             'Authorization' => 'Bearer '.$refreshed->json('access_token'),
             'Accept' => 'application/json, text/event-stream',
-        ])->assertOk()->assertJsonPath('result.serverInfo.name', 'Management-OS');
+        ])->assertOk()->assertJsonPath('result.serverInfo.name', 'os-edventure-ro');
 
         Passport::tokenModel()::query()
             ->where('user_id', $principal->getKey())
