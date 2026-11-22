@@ -4,7 +4,7 @@
 {{ $details['message'] }}
 
 <x-mail::button :url="$details['url']">
-Open Management OS
+Open os-edventure-ro
 </x-mail::button>
 
 </x-mail::message>
