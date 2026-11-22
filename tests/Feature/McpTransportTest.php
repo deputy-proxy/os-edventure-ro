@@ -127,7 +127,7 @@ class McpTransportTest extends TestCase
             'params' => new \stdClass,
         ], $sessionId)->assertOk();
         $tools = $toolsResponse->json('result.tools');
-        $this->assertCount(30, $tools);
+        $this->assertCount(42, $tools);
         $this->assertEqualsCanonicalizing([
             'get_executive_overview', 'get_management_kpis', 'get_kpi_alerts', 'get_business_health',
             'get_management_priorities', 'get_period_comparison', 'get_financial_overview', 'get_transactions',
@@ -135,8 +135,12 @@ class McpTransportTest extends TestCase
             'get_profitability_report', 'get_reconciliation_status', 'get_invoice_details',
             'search_customers', 'get_customer_details', 'get_customer_contracts', 'get_customer_interactions',
             'get_sales_pipeline', 'get_lead_details', 'get_customer_economics',
+            'create_customer_interaction', 'create_customer_lead',
+            'execute_create_customer_interaction', 'execute_create_customer_lead',
             'get_projects', 'get_project_details', 'get_tasks', 'get_task_details',
             'get_overdue_tasks', 'get_operational_bottlenecks', 'get_quarterly_objectives', 'get_meetings',
+            'create_task', 'update_task', 'assign_task', 'complete_task',
+            'execute_create_task', 'execute_update_task', 'execute_assign_task', 'execute_complete_task',
         ], array_column($tools, 'name'));
 
         $this->mcpPost([

@@ -2,9 +2,9 @@
 
 ## Status and boundary
 
-Issue #532 implements the approval and audit infrastructure required before controlled MCP writes. At the time #532 was implemented, the MCP capability registry and business permission matrix were empty. The registry now contains six read-only executive tools from #533 and nine read-only finance tools from #534. No business write tool is registered or enabled; the approval lifecycle remains infrastructure for later controlled-action work.
+Issue #532 implements the approval and audit infrastructure required before controlled MCP writes. The registry now contains 30 read-only tools from #533–#536 and the six approval-gated business operations introduced by #537. The six operations are create_task, update_task, assign_task, complete_task, create_customer_interaction and create_customer_lead. Each is exposed as a request tool plus an execution companion; the request never mutates business data.
 
-Future write tools must use the approval service and an existing domain service. A tool must not mutate domain data directly from its initial MCP request. This infrastructure is not a substitute for domain-specific authorization, record scoping, field allowlists, or service-level validation.
+Every current write tool uses the approval service and its task/CRM domain action. A tool must not mutate domain data directly from its initial MCP request. The execution companion accepts only approval_id and executes the immutable encrypted payload. This infrastructure does not replace domain-specific authorization, record scoping, field allowlists, or service-level validation.
 
 ## Persistence
 
@@ -30,7 +30,7 @@ The current states are:
 | `cancelled` | The requesting AI principal cancelled a pending or approved request |
 | `executing` | A single worker claimed the approved operation |
 | `executed` | The domain callback returned a confirmed result and it was persisted |
-| `execution_blocked` | Authorization was revoked at the final pre-execution check; the callback was not invoked |
+| `execution_blocked` | Authorization or domain validation failed before a confirmed mutation; the operation was not committed |
 | `execution_uncertain` | Execution returned no confirmed outcome or was interrupted; automatic retry is prohibited |
 
 Pending and approved requests expire after 15 minutes by default. Configure the duration with `MCP_APPROVAL_TTL_MINUTES` (bounded to 1–1,440 minutes). The maximum encoded argument/result size is 64 KiB by default (bounded between 1 KiB and 1 MiB); configure it with `MCP_APPROVAL_MAX_PAYLOAD_BYTES`.
@@ -49,17 +49,17 @@ The approval request requires the OAuth client ID extracted from the validated P
 
 The idempotency key is unique per AI principal and OAuth client:
 
-- Same principal + same client + same key + same canonical payload returns the original approval and, after execution, its stored result.
+- Same principal + same client + same key + same canonical payload returns the original approval and, after execution, its stored result. The request boundary checks for an existing idempotent payload before rerunning mutable domain preview validation, so a replay after lead creation does not fail merely because the email is now present.
 - Same principal + same key + different client or different payload is rejected.
 - A database uniqueness constraint resolves simultaneous duplicate submissions.
 
 Approval is single-use. Execution claims the approval row under a database lock and moves it to `executing` before the callback can run. A second worker cannot claim an already executing operation. The service re-checks the current AI principal, OAuth scopes, domain permissions, payload integrity, expiry, and distinct human approver. It performs a second authorization check immediately before invoking the domain callback.
 
-A future write tool must declare `operation_type => write` and `requires_approval => true`. Generic `addAuthorizedTool()` registration rejects writes; `addApprovalRequestTool()` can only create a pending request and never invokes a domain callback. `addApprovedExecutionTool()` accepts only the approval ID and dispatches the stored encrypted arguments through `McpApprovalService::executeApproved()`; it cannot accept replacement arguments.
+Every current write tool declares `operation_type => write` and `requires_approval => true`. Generic `addAuthorizedTool()` registration rejects writes; `addApprovalRequestTool()` can only create a pending request and never invokes a domain callback. `addApprovedExecutionTool()` accepts only the approval ID and dispatches the stored encrypted arguments through `McpApprovalService::executeApproved()`; it cannot accept replacement arguments. Future write tools must follow the same contract.
 
-A future tool callback must call the existing application/domain service. It must not implement parallel business logic or write directly to Eloquent models to bypass existing policy and lifecycle checks.
+The task callbacks use TaskWorkflow; CRM callbacks use CreateCustomerInteraction and CreateCustomerLead. These actions preserve the existing task assignment policy, project/phase relationship, customer-lead validation, status and attribution model events. Future tool callbacks must use an existing application/domain service rather than parallel business logic or direct persistence that bypasses policy and lifecycle checks.
 
-If authorization is revoked at the final check, the operation becomes `execution_blocked` and the domain callback is not invoked. If the callback throws, returns an invalid/oversized result, or the process stops before a confirmed completion is stored, the operation becomes `execution_uncertain`. The service never retries an uncertain operation automatically. Reconcile the domain state and its domain event before taking any manual recovery action.
+If authorization is revoked before execution or domain validation detects a stale task version/invalid transition before a mutation is committed, the operation becomes `execution_blocked`. If the callback returns no confirmed outcome, throws an unexpected exception, returns an invalid/oversized result, or the process stops before completion is stored, the operation becomes `execution_uncertain`. The service never retries an uncertain operation automatically. Reconcile the domain state and its domain event before taking any manual recovery action.
 
 The scheduled `mcp:expire-approvals` command runs every minute. It expires pending/approved requests and marks stale `executing` claims uncertain after five minutes by default (`MCP_EXECUTION_STALE_MINUTES`). The stale threshold must remain longer than the deployed maximum synchronous tool execution time.
 

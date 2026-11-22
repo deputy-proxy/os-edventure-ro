@@ -2,6 +2,7 @@
 
 namespace App\Mcp\Tools\Operations;
 
+use App\Actions\Tasks\TaskWorkflow;
 use App\Mcp\Authorization\AuthorizedMcpCapabilityRegistrar;
 use App\Models\Employee;
 use App\Models\Meeting;
@@ -14,6 +15,7 @@ use App\Services\TasksAndProjectsData;
 use Carbon\CarbonImmutable;
 use DateTimeInterface;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 use Mcp\Server\Builder as McpBuilder;
@@ -48,6 +50,177 @@ final class OperationsMcpCapabilityRegistrar extends AuthorizedMcpCapabilityRegi
         foreach ($tools as $name => $handler) {
             $this->addAuthorizedTool($builder, $name, $handler, $descriptions[$name], $this->schema($name));
         }
+
+        $this->registerTaskWriteTools($builder, app(TaskWorkflow::class));
+    }
+
+    private function registerTaskWriteTools(McpBuilder $builder, TaskWorkflow $workflow): void
+    {
+        $this->addApprovalRequestTool(
+            $builder,
+            'create_task',
+            function (User $user, array $arguments) use ($workflow): array {
+                return $this->withPrincipalContext($user, function () use ($arguments, $workflow): array {
+                    $values = $workflow->validateCreate(Arr::except($arguments, ['idempotency_key']));
+
+                    return [
+                        'preview' => [
+                            'operation' => 'Create task',
+                            'action' => $values['action'],
+                            'project_id' => (string) $values['project_id'],
+                            'project_phase_id' => (string) $values['project_phase_id'],
+                            'assigned_to' => (string) $values['assigned_to'],
+                            'due_date' => $values['due_date'],
+                            'estimated_effort_minutes' => (string) ($values['estimated_effort_minutes'] ?? 'not specified'),
+                        ],
+                        'target_type' => 'task',
+                    ];
+                });
+            },
+            'Requests independent human approval to create a task in an existing project and phase. The description is stored encrypted and omitted from the approval preview.',
+            $this->schema('create_task'),
+        );
+
+        $this->addApprovalRequestTool(
+            $builder,
+            'update_task',
+            function (User $user, array $arguments) use ($workflow): array {
+                return $this->withPrincipalContext($user, function () use ($user, $arguments, $workflow): array {
+                    $values = $workflow->validateUpdate(Arr::except($arguments, ['idempotency_key']));
+                    $task = $workflow->visibleTask($user, 'update_task', (int) $values['task_id']);
+                    $changedFields = array_keys(Arr::only($values, ['action', 'description', 'due_date', 'estimated_effort_minutes', 'status']));
+
+                    return [
+                        'preview' => [
+                            'operation' => 'Update task',
+                            'task_id' => (string) $task->getKey(),
+                            'changed_fields' => implode(', ', $changedFields),
+                            'new_action' => $values['action'] ?? 'unchanged',
+                            'new_due_date' => $values['due_date'] ?? 'unchanged',
+                            'new_status' => $values['status'] ?? 'unchanged',
+                            'expected_updated_at' => $values['expected_updated_at'],
+                        ],
+                        'target_type' => 'task',
+                        'target_id' => (string) $task->getKey(),
+                    ];
+                });
+            },
+            'Requests independent human approval to update only the allowlisted task fields. The task version must still match at execution.',
+            $this->schema('update_task'),
+        );
+
+        $this->addApprovalRequestTool(
+            $builder,
+            'assign_task',
+            function (User $user, array $arguments) use ($workflow): array {
+                return $this->withPrincipalContext($user, function () use ($user, $arguments, $workflow): array {
+                    $values = $workflow->validateAssign(Arr::except($arguments, ['idempotency_key']));
+                    $task = $workflow->visibleTask($user, 'assign_task', (int) $values['task_id']);
+
+                    return [
+                        'preview' => [
+                            'operation' => 'Assign task',
+                            'task_id' => (string) $task->getKey(),
+                            'assigned_to' => (string) $values['assigned_to'],
+                            'expected_updated_at' => $values['expected_updated_at'],
+                        ],
+                        'target_type' => 'task',
+                        'target_id' => (string) $task->getKey(),
+                    ];
+                });
+            },
+            'Requests independent human approval to assign a visible task to an eligible user under the existing task-assignment policy.',
+            $this->schema('assign_task'),
+        );
+
+        $this->addApprovalRequestTool(
+            $builder,
+            'complete_task',
+            function (User $user, array $arguments) use ($workflow): array {
+                return $this->withPrincipalContext($user, function () use ($user, $arguments, $workflow): array {
+                    $values = $workflow->validateComplete(Arr::except($arguments, ['idempotency_key']));
+                    $task = $workflow->visibleTask($user, 'complete_task', (int) $values['task_id']);
+
+                    return [
+                        'preview' => [
+                            'operation' => 'Complete task',
+                            'task_id' => (string) $task->getKey(),
+                            'current_status' => (string) $task->status,
+                            'expected_updated_at' => $values['expected_updated_at'],
+                        ],
+                        'target_type' => 'task',
+                        'target_id' => (string) $task->getKey(),
+                    ];
+                });
+            },
+            'Requests independent human approval to mark a visible, unfinished task as done.',
+            $this->schema('complete_task'),
+        );
+
+        $this->addApprovedExecutionTool(
+            $builder,
+            'execute_create_task',
+            'create_task',
+            function (User $user, array $arguments) use ($workflow): array {
+                return $this->withPrincipalContext($user, function () use ($arguments, $workflow): array {
+                    return $this->taskExecutionResult($workflow->create(Arr::except($arguments, ['idempotency_key'])));
+                });
+            },
+            'Executes an approved task creation using its immutable approved payload.',
+            $this->schema('execute_create_task'),
+        );
+
+        $this->addApprovedExecutionTool(
+            $builder,
+            'execute_update_task',
+            'update_task',
+            function (User $user, array $arguments) use ($workflow): array {
+                return $this->withPrincipalContext($user, function () use ($arguments, $workflow): array {
+                    return $this->taskExecutionResult($workflow->update(Arr::except($arguments, ['idempotency_key'])));
+                });
+            },
+            'Executes an approved allowlisted task update using its immutable approved payload.',
+            $this->schema('execute_update_task'),
+        );
+
+        $this->addApprovedExecutionTool(
+            $builder,
+            'execute_assign_task',
+            'assign_task',
+            function (User $user, array $arguments) use ($workflow): array {
+                return $this->withPrincipalContext($user, function () use ($arguments, $workflow): array {
+                    return $this->taskExecutionResult($workflow->assign(Arr::except($arguments, ['idempotency_key'])));
+                });
+            },
+            'Executes an approved task assignment using its immutable approved payload.',
+            $this->schema('execute_assign_task'),
+        );
+
+        $this->addApprovedExecutionTool(
+            $builder,
+            'execute_complete_task',
+            'complete_task',
+            function (User $user, array $arguments) use ($workflow): array {
+                return $this->withPrincipalContext($user, function () use ($arguments, $workflow): array {
+                    return $this->taskExecutionResult($workflow->complete(Arr::except($arguments, ['idempotency_key'])));
+                });
+            },
+            'Executes an approved task completion using its immutable approved payload.',
+            $this->schema('execute_complete_task'),
+        );
+    }
+
+    /** @return array<string, mixed> */
+    private function taskExecutionResult(Task $task): array
+    {
+        return [
+            'task_id' => (int) $task->getKey(),
+            'action' => (string) $task->action,
+            'status' => (string) $task->status,
+            'assigned_to' => (int) $task->assigned_to,
+            'due_date' => $this->dateValue($task->due_date),
+            'updated_at' => $task->updated_at?->toIso8601String(),
+        ];
     }
 
     private function projects(User $user, array $arguments): array
@@ -552,11 +725,50 @@ final class OperationsMcpCapabilityRegistrar extends AuthorizedMcpCapabilityRegi
                 'limit' => ['type' => 'integer', 'minimum' => 1, 'maximum' => 100],
                 'offset' => ['type' => 'integer', 'minimum' => 0, 'maximum' => 1000],
             ],
+            'create_task' => [
+                'action' => ['type' => 'string', 'minLength' => 1, 'maxLength' => 255],
+                'description' => ['type' => 'string', 'minLength' => 1, 'maxLength' => 10000],
+                'project_id' => ['type' => 'integer', 'minimum' => 1],
+                'project_phase_id' => ['type' => 'integer', 'minimum' => 1],
+                'assigned_to' => ['type' => 'integer', 'minimum' => 1],
+                'due_date' => ['type' => 'string', 'format' => 'date'],
+                'estimated_effort_minutes' => ['type' => 'integer', 'minimum' => 1, 'maximum' => 100000],
+                'idempotency_key' => ['type' => 'string', 'minLength' => 1, 'maxLength' => 128, 'pattern' => '^[A-Za-z0-9._:-]+$'],
+            ],
+            'update_task' => [
+                'task_id' => ['type' => 'integer', 'minimum' => 1],
+                'expected_updated_at' => ['type' => 'string', 'format' => 'date-time'],
+                'action' => ['type' => 'string', 'minLength' => 1, 'maxLength' => 255],
+                'description' => ['type' => 'string', 'minLength' => 1, 'maxLength' => 10000],
+                'due_date' => ['type' => 'string', 'format' => 'date'],
+                'estimated_effort_minutes' => ['type' => 'integer', 'minimum' => 1, 'maximum' => 100000],
+                'status' => ['type' => 'string', 'enum' => ['pending', 'in_progress']],
+                'idempotency_key' => ['type' => 'string', 'minLength' => 1, 'maxLength' => 128, 'pattern' => '^[A-Za-z0-9._:-]+$'],
+            ],
+            'assign_task' => [
+                'task_id' => ['type' => 'integer', 'minimum' => 1],
+                'assigned_to' => ['type' => 'integer', 'minimum' => 1],
+                'expected_updated_at' => ['type' => 'string', 'format' => 'date-time'],
+                'idempotency_key' => ['type' => 'string', 'minLength' => 1, 'maxLength' => 128, 'pattern' => '^[A-Za-z0-9._:-]+$'],
+            ],
+            'complete_task' => [
+                'task_id' => ['type' => 'integer', 'minimum' => 1],
+                'expected_updated_at' => ['type' => 'string', 'format' => 'date-time'],
+                'idempotency_key' => ['type' => 'string', 'minLength' => 1, 'maxLength' => 128, 'pattern' => '^[A-Za-z0-9._:-]+$'],
+            ],
+            'execute_create_task', 'execute_update_task', 'execute_assign_task', 'execute_complete_task' => [
+                'approval_id' => ['type' => 'integer', 'minimum' => 1],
+            ],
             default => [],
         };
         $required = match ($name) {
             'get_project_details' => ['project_id'],
             'get_task_details' => ['task_id'],
+            'create_task' => ['action', 'description', 'project_id', 'project_phase_id', 'due_date', 'idempotency_key'],
+            'update_task' => ['task_id', 'expected_updated_at', 'idempotency_key'],
+            'assign_task' => ['task_id', 'assigned_to', 'expected_updated_at', 'idempotency_key'],
+            'complete_task' => ['task_id', 'expected_updated_at', 'idempotency_key'],
+            'execute_create_task', 'execute_update_task', 'execute_assign_task', 'execute_complete_task' => ['approval_id'],
             default => [],
         };
 
