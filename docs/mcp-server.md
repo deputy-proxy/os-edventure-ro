@@ -14,7 +14,7 @@ The repository exposes a remote Model Context Protocol (MCP) endpoint at /mcp us
 
 - MCP POST requests require a Laravel Passport OAuth access token with the `mcp:use` scope. Each business tool additionally requires its dedicated OAuth tool scope and the configured AI principal; source-level data is filtered by the principal's current HexaLite permissions. Dynamic registration advertises every tool scope from the permission matrix to the client so ChatGPT can request the scopes used by discovered tools. Existing OAuth clients created before this behavior must be registered again.
 - Controlled writes are limited to the six #537 task/CRM operations. Request tools create pending approvals only; execution tools accept only approval_id and dispatch the exact encrypted, payload-bound arguments. All six operations require independent human review, execution-time authorization, and idempotency. No lead conversion, payroll, invoice issuance, financial correction/reversal, or user/role administration mutation is exposed.
-- The endpoint is not yet verified against the production reverse proxy/hosting environment or a live ChatGPT workspace.
+- The `/ready` endpoint verifies database connectivity and both Passport signing keys, including file permissions, before returning `ready`. The endpoint is not yet verified against the production reverse proxy/hosting environment or a live ChatGPT workspace.
 
 ## Implementation
 
