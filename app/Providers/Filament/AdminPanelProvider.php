@@ -20,7 +20,6 @@ use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
-use Lartisan\Architect\ArchitectPlugin;
 use Hexters\HexaLite\HexaLite;
 use Usamamuneerchaudhary\CommandPalette\FilamentCommandPalettePlugin;
 use AlizHarb\ActivityLog\ActivityLogPlugin;
@@ -128,7 +127,6 @@ class AdminPanelProvider extends PanelProvider
             ->profile(Profile::class, isSimple: false)
             //->defaultAvatarProvider(GetAvatarProvider::class)
             ->plugins([
-                ArchitectPlugin::make(),
                 HexaLite::make(),
                 FilamentCommandPalettePlugin::make(),
                 CommentsPlugin::make(),
