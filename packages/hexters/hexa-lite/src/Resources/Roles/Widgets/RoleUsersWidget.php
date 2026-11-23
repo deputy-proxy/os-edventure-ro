@@ -5,6 +5,7 @@ namespace Hexters\HexaLite\Resources\Roles\Widgets;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Filament\Widgets\TableWidget as BaseWidget;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 
 class RoleUsersWidget extends BaseWidget
@@ -21,7 +22,7 @@ class RoleUsersWidget extends BaseWidget
     public function table(Table $table): Table
     {
         return $table
-            ->query(fn () => $this->record?->users() ?? config('hexa.models.user')::query()->whereRaw('1 = 0'))
+            ->query(fn (): Builder => $this->record?->users()->getQuery() ?? config('hexa.models.user')::query()->whereRaw('1 = 0'))
             ->columns([
                 TextColumn::make('name')
                     ->searchable()
