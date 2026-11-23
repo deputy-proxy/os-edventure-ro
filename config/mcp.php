@@ -596,7 +596,7 @@ return [
     'access_token_ttl_minutes' => (int) env('MCP_ACCESS_TOKEN_TTL_MINUTES', 60),
     'refresh_token_ttl_days' => (int) env('MCP_REFRESH_TOKEN_TTL_DAYS', 30),
     'redirect_domains' => array_values(array_filter(array_map('trim', explode(',', $configuredRedirectDomains)))),
-    'server_name' => env('MCP_SERVER_NAME', 'Management-OS'),
+    'server_name' => env('MCP_SERVER_NAME', 'os-edventure-ro'),
     'server_version' => env('MCP_SERVER_VERSION', '0.1.0'),
     'max_body_bytes' => (int) env('MCP_MAX_BODY_BYTES', 1048576),
     'request_timeout_seconds' => (int) env('MCP_REQUEST_TIMEOUT_SECONDS', 25),

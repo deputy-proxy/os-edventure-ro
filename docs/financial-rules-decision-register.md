@@ -1,8 +1,8 @@
 # Financial Rules Decision Register
 
 **Status:** Company-owner business decisions recorded. On 2026-10-21, the owner explicitly attested that the company email, accountant scope information, and specialist-review details described in the closure record are authentic. This is owner-attested evidence, not direct repository inspection or an independent audit.
-**Issue:** [#304](https://github.com/deputy-proxy/Management-OS/issues/304)  
-**Scope:** Management-OS operational financial semantics. This register does not certify statutory accounting, tax, payroll, or general-ledger compliance.
+**Issue:** [#304](https://github.com/deputy-proxy/os-edventure-ro/issues/304)  
+**Scope:** os-edventure-ro operational financial semantics. This register does not certify statutory accounting, tax, payroll, or general-ledger compliance.
 
 ## Approval record
 

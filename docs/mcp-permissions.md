@@ -140,7 +140,7 @@ Operations outputs exclude task descriptions, creator IDs, taskable IDs and depe
 
 ## Human approval and audit permissions
 
-Issue #532 adds three separate Management-OS staff permissions:
+Issue #532 adds three separate os-edventure-ro staff permissions:
 
 - `mcp_approval.index` — view pending and historical approval requests and their safe previews.
 - `mcp_approval.approve` — approve or reject a pending operation with a required rationale.

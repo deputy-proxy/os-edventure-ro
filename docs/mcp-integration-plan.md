@@ -1,14 +1,14 @@
-# Management-OS MCP integration: implementation plan
+# os-edventure-ro MCP integration: implementation plan
 
 **Status:** Implementation plan with verified progress through issue #534
-**Repository:** `deputy-proxy/os-edventure-ro` (application name: Management-OS)
-**Target deployment:** Existing Management-OS Laravel application  
+**Repository:** `deputy-proxy/os-edventure-ro` (application name: os-edventure-ro)
+**Target deployment:** Existing os-edventure-ro Laravel application  
 **Transport target:** Remote MCP over HTTPS using Streamable HTTP, subject to SDK and ChatGPT-client compatibility verification  
 **Planning baseline:** 2026-11-20
 
 ## 1. Executive summary
 
-Add a secure MCP server to the existing Management-OS Laravel modular monolith. ChatGPT will connect to the existing application and use explicitly exposed tools to read management information and, in later releases, request a limited set of controlled business actions.
+Add a secure MCP server to the existing os-edventure-ro Laravel modular monolith. ChatGPT will connect to the existing application and use explicitly exposed tools to read management information and, in later releases, request a limited set of controlled business actions.
 
 Laravel remains the system of record. MCP is an integration boundary, not a second business-logic layer and not a generic database/API proxy. Tool handlers must call existing application/domain services or introduce reusable application actions where a genuine gap exists. They must not query or mutate Eloquent models as an alternative to the application's domain workflows.
 
@@ -56,7 +56,7 @@ If current implementation differs from this planning baseline, implementation is
 
 ### Goals
 
-- Allow ChatGPT to retrieve permission-filtered, current Management-OS business information.
+- Allow ChatGPT to retrieve permission-filtered, current os-edventure-ro business information.
 - Give management a reliable way to ask cross-domain questions using authoritative application data.
 - Expose narrow, named tools with stable schemas, explicit periods, provenance and structured errors.
 - Allow a small set of low-risk operational writes only through existing domain workflows and a separate human approval step.
@@ -69,7 +69,7 @@ If current implementation differs from this planning baseline, implementation is
 - Splitting the monolith into microservices.
 - Creating generic `list_models`, arbitrary SQL, generic Eloquent CRUD or unrestricted file/database access.
 - Giving the AI account Owner, superadmin or equivalent privilege.
-- Treating ChatGPT's conversational confirmation as proof of authorization inside Management-OS.
+- Treating ChatGPT's conversational confirmation as proof of authorization inside os-edventure-ro.
 - Enabling payroll calculation/approval, invoice issuance/submission, financial reversals/corrections, role administration or other high-impact writes in the initial releases.
 - Treating market estimates, search indices or third-party campaign metrics as verified facts without provenance and quality labels.
 
@@ -77,7 +77,7 @@ If current implementation differs from this planning baseline, implementation is
 
 ### Deployment
 
-Run the MCP endpoint inside the existing Management-OS Laravel application, behind HTTPS and the existing application deployment/operations controls. The intended endpoint is `/mcp`, using remote MCP Streamable HTTP if supported by the selected, pinned PHP SDK and the ChatGPT connector/client.
+Run the MCP endpoint inside the existing os-edventure-ro Laravel application, behind HTTPS and the existing application deployment/operations controls. The intended endpoint is `/mcp`, using remote MCP Streamable HTTP if supported by the selected, pinned PHP SDK and the ChatGPT connector/client.
 
 Do not add a separate Node service by default. First verify PHP/runtime compatibility, HTTP transport support, request lifecycle behavior, hosting limits, reverse-proxy behavior, session/state requirements and timeout limits. If the current hosting cannot reliably support the required transport, document evidence and propose the smallest viable infrastructure adjustment before implementation.
 
@@ -103,7 +103,7 @@ For a controlled write:
 ChatGPT requests action
   -> validate and preview exact operation
   -> create pending approval bound to payload hash
-  -> authorized human reviews/approves in authenticated Management-OS UI
+  -> authorized human reviews/approves in authenticated os-edventure-ro UI
   -> approval is checked, unexpired and single-use
   -> existing domain action executes with idempotency key
   -> audit records AI actor, approver, action and outcome
@@ -130,7 +130,7 @@ Avoid introducing a second authorization framework. Keep MCP permission mapping 
 
 ## 5. Authentication and AI identity
 
-Create a dedicated Management-OS service account for the integration (proposed label: **AI Assistant**; proposed email such as `ai-assistant@edventure.ro` is an example only and must be provisioned/confirmed by the system owner).
+Create a dedicated os-edventure-ro service account for the integration (proposed label: **AI Assistant**; proposed email such as `ai-assistant@edventure.ro` is an example only and must be provisioned/confirmed by the system owner).
 
 Requirements:
 
@@ -141,7 +141,7 @@ Requirements:
 - Use OAuth 2.1 authorization-code flow with PKCE if supported by the selected SDK and the ChatGPT MCP client. Verify exact client compatibility and redirect/metadata requirements before committing to the implementation. Do not invent a custom OAuth protocol if a supported, secure Laravel integration is available.
 - Validate issuer/audience/client, scopes, token expiry, revocation, redirect URI, state/PKCE and replay protections as applicable to the chosen flow.
 - Enforce HTTPS; do not place secrets in source control, URLs, logs or tool outputs.
-- Resolve each request to the dedicated Management-OS principal and carry that principal through application authorization and audit.
+- Resolve each request to the dedicated os-edventure-ro principal and carry that principal through application authorization and audit.
 - Revoke access immediately when the integration is disabled or compromised.
 
 A service account is not a human approval identity. Where a business action requires a human decision, record the actual approving staff user separately.
@@ -158,7 +158,7 @@ Rules:
 
 - Deny by default.
 - Every tool declares required MCP permission(s), underlying domain permission(s), allowed record scope and sensitive-field policy.
-- MCP permissions may narrow existing access but must never grant more than the underlying Management-OS permission.
+- MCP permissions may narrow existing access but must never grant more than the underlying os-edventure-ro permission.
 - Apply authorization on the server for every call; UI visibility is not a security boundary.
 - Re-check permissions at execution time, not only when an approval is requested.
 - Filter list/search results before aggregation where counts could reveal restricted records.
@@ -175,7 +175,7 @@ A permission matrix must be maintained alongside tool definitions. Initial permi
 ChatGPT's message that a user said "yes" is not a trusted authorization artifact. For controlled mutations:
 
 - Create a pending approval request containing actor, action/tool, target record, validated arguments, human-readable preview, creation/expiry times and a cryptographic hash of the canonical payload.
-- Present the request in an authenticated Management-OS UI to a human who has the relevant approval permission.
+- Present the request in an authenticated os-edventure-ro UI to a human who has the relevant approval permission.
 - Require explicit approval or rejection in that UI.
 - The AI service account cannot approve its own request.
 - Bind approval to the exact payload hash; any changed argument requires a new approval.
@@ -184,7 +184,7 @@ ChatGPT's message that a user said "yes" is not a trusted authorization artifact
 - Record approver identity and decision time. If a human initiator is known, record it separately; never infer or fabricate it.
 - Handle rejected, expired, cancelled, duplicate and partially failed operations explicitly.
 
-If a future delegated-human OAuth model is considered, it must provide a verifiable Management-OS human identity and cannot rely on conversational text alone.
+If a future delegated-human OAuth model is considered, it must provide a verifiable os-edventure-ro human identity and cannot rely on conversational text alone.
 
 ### Audit
 
@@ -343,7 +343,7 @@ Exit criteria:
 Issues: task/CRM mutations, resources and management prompts.
 
 Exit criteria:
-- Exact-payload approval in Management-OS UI is mandatory for configured writes.
+- Exact-payload approval in os-edventure-ro UI is mandatory for configured writes.
 - AI cannot approve its own requests.
 - Domain workflows, idempotency, audit and retry behavior are covered.
 - Initial writes remain limited to tasks and CRM interactions/leads.
@@ -428,13 +428,13 @@ For each issue:
 
 The MCP integration is complete only when:
 
-- ChatGPT connects to the existing Management-OS application over the verified secure remote transport.
+- ChatGPT connects to the existing os-edventure-ro application over the verified secure remote transport.
 - The dedicated AI account is authenticated, revocable and least-privileged.
 - Laravel remains the only business source of truth.
 - Every tool is narrowly scoped, validated, permission-checked and documented.
 - Existing domain services/actions own business logic and mutations.
 - Financial ambiguity, currency boundaries, historical truth and data provenance are preserved.
-- Any enabled write is independently approved by an authorized human in Management-OS, bound to the exact payload, idempotent and audited.
+- Any enabled write is independently approved by an authorized human in os-edventure-ro, bound to the exact payload, idempotent and audited.
 - Privacy controls cover finance, HR, students and customer data.
 - Regression tests and all required CI checks pass.
 - Deployment, monitoring, revocation, incident response, backup and recovery documentation are verified against the real environment.

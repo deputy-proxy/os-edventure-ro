@@ -31,7 +31,7 @@ If an older ANAF guide or endpoint listing conflicts with the current Ministry t
 
 ## 3. Integration boundary and lifecycle
 
-The integration must be a controlled application service invoked by an authorized Management-OS workflow. UI components, AI agents, scheduled jobs, and MCP tools must not call ANAF directly or write invoice state directly. Laravel application/domain services own authorization, state transitions, persistence, audit events and retry decisions.
+The integration must be a controlled application service invoked by an authorized os-edventure-ro workflow. UI components, AI agents, scheduled jobs, and MCP tools must not call ANAF directly or write invoice state directly. Laravel application/domain services own authorization, state transitions, persistence, audit events and retry decisions.
 
 Keep these states distinct:
 

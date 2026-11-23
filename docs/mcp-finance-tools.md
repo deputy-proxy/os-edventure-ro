@@ -1,6 +1,6 @@
 # MCP finance tools
 
-Issue #534 adds nine read-only finance tools to the Streamable HTTP MCP server. The handlers reuse existing Management-OS finance reporting services. They do not create invoices, write transactions, approve allocations, generate forecast runs, persist budget comparison snapshots, calculate profitability runs, or make reconciliation decisions.
+Issue #534 adds nine read-only finance tools to the Streamable HTTP MCP server. The handlers reuse existing os-edventure-ro finance reporting services. They do not create invoices, write transactions, approve allocations, generate forecast runs, persist budget comparison snapshots, calculate profitability runs, or make reconciliation decisions.
 
 ## Authorization
 

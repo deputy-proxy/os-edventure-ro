@@ -2,7 +2,7 @@
 
 **Status:** Engineering scope audit; invoice balance semantics remain gated  
 **Date:** 2026-10-27  
-**Roadmap:** [Issue #350](https://github.com/deputy-proxy/Management-OS/issues/350)
+**Roadmap:** [Issue #350](https://github.com/deputy-proxy/os-edventure-ro/issues/350)
 
 ## Existing capability
 

@@ -24,7 +24,7 @@ final class McpServerFactory
 
         $builder = Server::builder()
             ->setServerInfo(
-                (string) config('mcp.server_name', 'Management-OS'),
+                (string) config('mcp.server_name', 'os-edventure-ro'),
                 (string) config('mcp.server_version', '0.1.0'),
             )
             ->setLogger($logger)

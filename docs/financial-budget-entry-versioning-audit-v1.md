@@ -2,7 +2,7 @@
 
 **Status:** Engineering scope audit; financial budget contract not yet implemented  
 **Date:** 2026-10-27  
-**Roadmap:** [Issue #356](https://github.com/deputy-proxy/Management-OS/issues/356)
+**Roadmap:** [Issue #356](https://github.com/deputy-proxy/os-edventure-ro/issues/356)
 
 ## Existing capability
 

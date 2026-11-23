@@ -1,6 +1,6 @@
 # Market intelligence configuration and observation contracts
 
-**Status:** Provisional engineering defaults. Business-owner approval and live-source validation remain deferred under [issue #359](https://github.com/deputy-proxy/Management-OS/issues/359).
+**Status:** Provisional engineering defaults. Business-owner approval and live-source validation remain deferred under [issue #359](https://github.com/deputy-proxy/os-edventure-ro/issues/359).
 
 ## Configuration
 

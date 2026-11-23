@@ -2,7 +2,7 @@
 
 ## Scope and source revision
 
-- Roadmap issue: [#302 - 1.1 Run and record baseline test suite](https://github.com/deputy-proxy/Management-OS/issues/302)
+- Roadmap issue: [#302 - 1.1 Run and record baseline test suite](https://github.com/deputy-proxy/os-edventure-ro/issues/302)
 - Baseline commit: `e7e86a960d640ac74d6f6d6959c49c0f41741198`
 - Recorded: 2026-10-21
 - Environment: isolated persistent Railway development Sandbox; no production database, credentials, or services used.

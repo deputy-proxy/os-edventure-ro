@@ -23,7 +23,7 @@ The current states are:
 
 | State | Meaning |
 | --- | --- |
-| `pending` | Validated request is awaiting an independent Management-OS human reviewer |
+| `pending` | Validated request is awaiting an independent os-edventure-ro human reviewer |
 | `approved` | A permitted human reviewer approved the exact payload |
 | `rejected` | A permitted human reviewer rejected the request |
 | `expired` | The approval deadline passed before review or execution |
@@ -35,7 +35,7 @@ The current states are:
 
 Pending and approved requests expire after 15 minutes by default. Configure the duration with `MCP_APPROVAL_TTL_MINUTES` (bounded to 1–1,440 minutes). The maximum encoded argument/result size is 64 KiB by default (bounded between 1 KiB and 1 MiB); configure it with `MCP_APPROVAL_MAX_PAYLOAD_BYTES`.
 
-A request requires a non-empty human-readable preview of up to 20 short scalar fields. Field names that indicate credentials, contact details, banking, identity or medical data are rejected. Target metadata is restricted to safe record types and non-sensitive identifiers; email addresses, IBAN-like values and long numeric personal identifiers are not copied into the audit. Preview values are encrypted at rest and only the preview, not the raw arguments, is shown in the Management-OS list.
+A request requires a non-empty human-readable preview of up to 20 short scalar fields. Field names that indicate credentials, contact details, banking, identity or medical data are rejected. Target metadata is restricted to safe record types and non-sensitive identifiers; email addresses, IBAN-like values and long numeric personal identifiers are not copied into the audit. Preview values are encrypted at rest and only the preview, not the raw arguments, is shown in the os-edventure-ro list.
 
 The human reviewer must have the explicit `mcp_approval.approve` permission and must be distinct from the AI principal and, when known, the human initiator. The AI principal is denied all approval UI permissions even if a role is misconfigured. Review actions require a concise rationale. Approval and rejection are separate audited events.
 
@@ -63,7 +63,7 @@ If authorization is revoked before execution or domain validation detects a stal
 
 The scheduled `mcp:expire-approvals` command runs every minute. It expires pending/approved requests and marks stale `executing` claims uncertain after five minutes by default (`MCP_EXECUTION_STALE_MINUTES`). The stale threshold must remain longer than the deployed maximum synchronous tool execution time.
 
-## Management-OS access
+## os-edventure-ro access
 
 The authenticated Filament panel exposes two read-only resources:
 

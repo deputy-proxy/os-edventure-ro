@@ -1,4 +1,4 @@
-# Management-OS API contract and integration boundary
+# os-edventure-ro API contract and integration boundary
 
 ## Consumer inventory and scope
 
@@ -6,8 +6,8 @@ The repository currently establishes one API use case: an authenticated user rea
 
 | Endpoint | Consumer / use case | Data scope | Authentication and permission | Owner |
 |---|---|---|---|---|
-| `GET /api/v1/user` | Authenticated account client reads its own profile | Only the authenticated user's `id`, `name`, and `email` | Sanctum authentication plus `profile:read` token ability | Management-OS application team; named individual owner and external consumers remain to be assigned |
-| `GET /api/user` | Compatibility for existing clients of the pre-versioned endpoint | Same minimal self-profile fields | Sanctum authentication; retained compatibility route does not bypass authentication | Management-OS application team; inventory existing clients before deprecation |
+| `GET /api/v1/user` | Authenticated account client reads its own profile | Only the authenticated user's `id`, `name`, and `email` | Sanctum authentication plus `profile:read` token ability | os-edventure-ro application team; named individual owner and external consumers remain to be assigned |
+| `GET /api/user` | Compatibility for existing clients of the pre-versioned endpoint | Same minimal self-profile fields | Sanctum authentication; retained compatibility route does not bypass authentication | os-edventure-ro application team; inventory existing clients before deprecation |
 
 No generic CRUD endpoints are exposed. Employee data, payroll, finance, students, customer records, assessment data, and write/command operations are out of scope until a named consumer, owner, business purpose, data minimization rule, and authorization model are approved. The employee-count route is intentionally absent; issue #215 removed it because no supported consumer was established.
 

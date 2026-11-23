@@ -2,7 +2,7 @@
 
 **Status:** Engineering audit; not an approved accounting policy  
 **Date:** 2026-10-27  
-**Related roadmap:** [Issue #353](https://github.com/deputy-proxy/Management-OS/issues/353) and [Issue #354](https://github.com/deputy-proxy/Management-OS/issues/354)
+**Related roadmap:** [Issue #353](https://github.com/deputy-proxy/os-edventure-ro/issues/353) and [Issue #354](https://github.com/deputy-proxy/os-edventure-ro/issues/354)
 
 ## Purpose
 

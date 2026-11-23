@@ -167,10 +167,10 @@ class HealthAndObservabilityTest extends TestCase
 
     public function test_backup_verification_rejects_missing_and_empty_files(): void
     {
-        $this->artisan('ops:verify-backup', ['path' => sys_get_temp_dir().'/management-os-missing-backup.sql'])
+        $this->artisan('ops:verify-backup', ['path' => sys_get_temp_dir().'/os-edventure-ro-missing-backup.sql'])
             ->assertExitCode(1);
 
-        $path = tempnam(sys_get_temp_dir(), 'management-os-empty-backup-');
+        $path = tempnam(sys_get_temp_dir(), 'os-edventure-ro-empty-backup-');
         try {
             $this->artisan('ops:verify-backup', ['path' => $path])->assertExitCode(1);
         } finally {
@@ -180,7 +180,7 @@ class HealthAndObservabilityTest extends TestCase
 
     public function test_backup_verification_reports_digest_but_disclaims_restore_validation(): void
     {
-        $path = tempnam(sys_get_temp_dir(), 'management-os-backup-');
+        $path = tempnam(sys_get_temp_dir(), 'os-edventure-ro-backup-');
         file_put_contents($path, 'non-secret backup fixture');
 
         try {
@@ -196,7 +196,7 @@ class HealthAndObservabilityTest extends TestCase
 
     public function test_backup_verification_compares_a_trusted_expected_digest(): void
     {
-        $path = tempnam(sys_get_temp_dir(), 'management-os-backup-');
+        $path = tempnam(sys_get_temp_dir(), 'os-edventure-ro-backup-');
         file_put_contents($path, 'non-secret backup fixture');
         $digest = hash_file('sha256', $path);
 
