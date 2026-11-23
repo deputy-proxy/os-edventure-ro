@@ -2,6 +2,7 @@
 
 use App\Mcp\Authorization\Scopes\McpGlobalRecordScope;
 use App\Mcp\Authorization\Scopes\McpOwnedRecordScope;
+use App\Mcp\Authorization\Scopes\McpProcessRecordScope;
 use App\Mcp\Authorization\Scopes\McpTaskRecordScope;
 use App\Mcp\Tools\Crm\CrmMcpCapabilityRegistrar;
 use App\Mcp\Tools\Executive\ExecutiveMcpCapabilityRegistrar;
@@ -9,6 +10,7 @@ use App\Mcp\Tools\Extended\ExtendedDomainMcpCapabilityRegistrar;
 use App\Mcp\Tools\Finance\FinanceMcpCapabilityRegistrar;
 use App\Mcp\Tools\Management\ManagementMcpCapabilityRegistrar;
 use App\Mcp\Tools\Operations\OperationsMcpCapabilityRegistrar;
+use App\Mcp\Tools\Processes\ProcessMcpCapabilityRegistrar;
 
 $applicationHost = parse_url((string) env('APP_URL', 'http://localhost'), PHP_URL_HOST) ?: 'localhost';
 $configuredHosts = trim((string) env('MCP_ALLOWED_HOSTS', ''));
@@ -76,7 +78,7 @@ $kpiResultFields = [
 return [
     'authorization_server' => $authorizationServer === '' ? null : rtrim($authorizationServer, '/'),
     'ai_principal_email' => env('MCP_AI_PRINCIPAL_EMAIL'),
-    'permission_matrix_version' => '1.6.0',
+    'permission_matrix_version' => '1.7.0',
     'domain_permission_guard' => env('MCP_DOMAIN_PERMISSION_GUARD', config('auth.defaults.guard', 'web')),
     'principal_role' => 'Assistant',
     'capability_registrars' => [
@@ -84,6 +86,7 @@ return [
         FinanceMcpCapabilityRegistrar::class,
         CrmMcpCapabilityRegistrar::class,
         OperationsMcpCapabilityRegistrar::class,
+        ProcessMcpCapabilityRegistrar::class,
         ExtendedDomainMcpCapabilityRegistrar::class,
         ManagementMcpCapabilityRegistrar::class,
     ],
@@ -396,6 +399,108 @@ return [
                 'availability' => true, 'timezone' => true, 'total_count' => true, 'returned_count' => true, 'limit' => true, 'offset' => true, 'has_more' => true,
                 'meetings' => ['id' => true, 'subject' => true, 'type' => true, 'status' => true, 'starts_at' => true, 'ends_at' => true, 'location' => true, 'organizer_name' => true, 'participants_count' => true],
             ],
+        ],
+        'get_processes' => [
+            'mcp_scope' => 'mcp.processes.list.read',
+            'operation_type' => 'read',
+            'domain_permissions' => ['process.index'],
+            'record_scope' => McpProcessRecordScope::class,
+            'allowed_fields' => [
+                'availability' => true, 'total_count' => true, 'returned_count' => true,
+                'limit' => true, 'offset' => true, 'has_more' => true,
+                'processes' => [
+                    'id' => true, 'title' => true, 'main_topic' => true, 'owner_name' => true,
+                    'step_block_count' => true, 'created_at' => true, 'updated_at' => true, 'deleted_at' => true,
+                ],
+            ],
+        ],
+        'get_process_details' => [
+            'mcp_scope' => 'mcp.processes.detail.read',
+            'operation_type' => 'read',
+            'domain_permissions' => ['process.index'],
+            'record_scope' => McpProcessRecordScope::class,
+            'allowed_fields' => [
+                'availability' => true,
+                'process' => [
+                    'id' => true, 'title' => true, 'description' => true, 'main_topic' => true,
+                    'owner_name' => true, 'visible_to_roles' => ['name' => true], 'created_at' => true,
+                    'updated_at' => true, 'deleted_at' => true,
+                ],
+            ],
+        ],
+        'get_process_steps' => [
+            'mcp_scope' => 'mcp.processes.steps.read',
+            'operation_type' => 'read',
+            'domain_permissions' => ['process.index'],
+            'record_scope' => McpProcessRecordScope::class,
+            'allowed_fields' => [
+                'availability' => true, 'process_id' => true,
+                'steps' => ['type' => true, 'data' => ['title' => true, 'actor' => true, 'content' => true, 'input' => true, 'output' => true]],
+            ],
+        ],
+        'get_process_tasks' => [
+            'mcp_scope' => 'mcp.processes.tasks.read',
+            'operation_type' => 'read',
+            'domain_permissions' => ['process.index', 'task.index'],
+            'optional_domain_permissions' => ['task.view_all'],
+            'record_scope' => McpProcessRecordScope::class,
+            'allowed_fields' => [
+                'availability' => true, 'process_id' => true, 'total_count' => true, 'returned_count' => true,
+                'limit' => true, 'offset' => true, 'has_more' => true,
+                'tasks' => [
+                    'id' => true, 'action' => true, 'status' => true, 'due_date' => true,
+                    'estimated_effort_minutes' => true, 'assignee_name' => true,
+                    'project_title' => true, 'project_phase_title' => true,
+                ],
+            ],
+        ],
+        'create_process' => [
+            'mcp_scope' => 'mcp.processes.create.request',
+            'operation_type' => 'write', 'requires_approval' => true,
+            'domain_permissions' => ['process.create'],
+            'record_scope' => McpProcessRecordScope::class,
+            'allowed_fields' => [
+                'approval_id' => true, 'status' => true, 'expires_at' => true, 'preview_summary' => true,
+            ],
+        ],
+        'execute_create_process' => [
+            'mcp_scope' => 'mcp.processes.create.execute',
+            'operation_type' => 'write', 'requires_approval' => true,
+            'domain_permissions' => ['process.create'],
+            'record_scope' => McpProcessRecordScope::class,
+            'allowed_fields' => ['process_id' => true, 'title' => true, 'status' => true, 'updated_at' => true],
+        ],
+        'update_process' => [
+            'mcp_scope' => 'mcp.processes.update.request',
+            'operation_type' => 'write', 'requires_approval' => true,
+            'domain_permissions' => ['process.update'],
+            'record_scope' => McpProcessRecordScope::class,
+            'allowed_fields' => [
+                'approval_id' => true, 'status' => true, 'expires_at' => true, 'preview_summary' => true,
+            ],
+        ],
+        'execute_update_process' => [
+            'mcp_scope' => 'mcp.processes.update.execute',
+            'operation_type' => 'write', 'requires_approval' => true,
+            'domain_permissions' => ['process.update'],
+            'record_scope' => McpProcessRecordScope::class,
+            'allowed_fields' => ['process_id' => true, 'title' => true, 'status' => true, 'updated_at' => true],
+        ],
+        'delete_process' => [
+            'mcp_scope' => 'mcp.processes.delete.request',
+            'operation_type' => 'write', 'requires_approval' => true,
+            'domain_permissions' => ['process.delete'],
+            'record_scope' => McpProcessRecordScope::class,
+            'allowed_fields' => [
+                'approval_id' => true, 'status' => true, 'expires_at' => true, 'preview_summary' => true,
+            ],
+        ],
+        'execute_delete_process' => [
+            'mcp_scope' => 'mcp.processes.delete.execute',
+            'operation_type' => 'write', 'requires_approval' => true,
+            'domain_permissions' => ['process.delete'],
+            'record_scope' => McpProcessRecordScope::class,
+            'allowed_fields' => ['process_id' => true, 'status' => true, 'deleted_at' => true],
         ],
         'get_financial_overview' => [
             'mcp_scope' => 'mcp.finance.overview.read', 'operation_type' => 'read', 'domain_permissions' => ['finance-dashboard.view'],

@@ -6,16 +6,16 @@ This is the operational entry point for the os-edventure-ro MCP integration. It 
 
 ## 1. Current capability and safety boundary
 
-The remote MCP endpoint is **/mcp** and uses Streamable HTTP. The current registry contains 56 tools:
+The remote MCP endpoint is **/mcp** and uses Streamable HTTP. The current registry contains 66 tools:
 
-- 44 read-only tools covering executive reporting, finance, CRM, operations, HR/payroll, products, marketing, and academic operations;
-- 12 approval-request/execution tools representing six controlled task/CRM operations: create, update, assign, and complete tasks; create customer interactions; and create customer leads.
+- 48 read-only tools covering executive reporting, finance, CRM, operations, process definitions, HR/payroll, products, marketing, and academic operations;
+- 18 approval-request/execution tools representing nine controlled operations: six task/CRM operations and create/update/soft-delete process definitions.
 
 The server also exposes five permission-aware read-only resources and five prompt templates. Prompts do not fetch data or grant permissions; each tool/resource call is independently authorized.
 
 Every tool requires its dedicated OAuth scope and the configured AI principal. Dynamic client registration advertises and allows the complete scope set from the permission matrix so ChatGPT can request the scopes needed by discovered tools; the issued token must still contain the individual tool scope. Required/optional HexaLite permissions, record scopes, and nested output-field allowlists are enforced server-side. The AI principal must never receive Owner, superadmin, or blanket administrator privileges.
 
-The six task/CRM operations are not direct writes from the initial request. A request creates a pending approval containing an immutable encrypted payload. A separate eligible human reviewer must approve the exact payload in the os-edventure-ro panel. The execution tool accepts only the approval ID and rechecks authorization before calling the existing domain action. ChatGPT's conversational confirmation is not a substitute for this approval.
+The nine task/CRM and process-definition operations are not direct writes from the initial request. A request creates a pending approval containing an immutable encrypted payload. A separate eligible human reviewer must approve the exact payload in the os-edventure-ro panel. The execution tool accepts only the approval ID and rechecks authorization before calling the existing domain action/workflow. Process-definition writes do not execute process steps or create tasks. ChatGPT's conversational confirmation is not a substitute for this approval.
 
 No MCP write is available for payroll, invoices, financial corrections/reversals, lead conversion, or user/role administration. HR and academic outputs remain aggregate-only. Production enablement and any expansion of sensitive fields remain subject to the field, audience, and retention review recorded in [issue #539](https://github.com/deputy-proxy/os-edventure-ro/issues/539).
 
@@ -139,7 +139,7 @@ Run this from an authorized operator shell. It revokes all active access and ref
 
 ## 6. Permission matrix and tool contracts
 
-The versioned runtime permission matrix is config/mcp.php (currently version 1.6.0). It is the source of truth for each tool's OAuth scope, required/optional HexaLite permissions, record scope, nested output-field allowlist, read/write classification, and approval requirement.
+The versioned runtime permission matrix is config/mcp.php (currently version 1.7.0). It is the source of truth for each tool's OAuth scope, required/optional HexaLite permissions, record scope, nested output-field allowlist, read/write classification, and approval requirement.
 
 The AI principal receives no domain permissions automatically. Assigning a permission to its Assistant role must be deliberate and limited to keys declared by the matrix. Handlers check optional source permissions independently. List/report handlers apply record scopes before filters, counts, aggregation, and pagination.
 
