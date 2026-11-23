@@ -55,6 +55,12 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-composer-
 
+      - name: Refresh Composer lock metadata (temporary CI diagnostic)
+        run: composer update --lock --no-install --no-interaction
+
+      - name: Report Composer lock content hash (temporary CI diagnostic)
+        run: php -r '$lock = json_decode(file_get_contents("composer.lock"), true); echo "Composer lock content-hash: ".$lock["content-hash"].PHP_EOL;'
+
       - name: Validate Composer configuration
         run: composer validate --no-check-publish
 
