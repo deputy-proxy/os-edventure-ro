@@ -253,6 +253,7 @@ jobs:
           tests/Feature/McpFinanceToolsTest.php
           tests/Feature/McpCrmToolsTest.php
           tests/Feature/McpOperationsToolsTest.php
+          tests/Feature/McpProcessToolsTest.php
           tests/Feature/MarketTrendTest.php
           tests/Feature/CompetitorOfferObservationTest.php
           tests/Feature/GoogleAdsCampaignMetricsImporterTest.php

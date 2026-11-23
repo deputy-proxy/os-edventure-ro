@@ -2,34 +2,34 @@
 
 namespace Database\Factories;
 
+use App\Models\Employee;
 use App\Models\Process;
+use Hexters\HexaLite\Models\HexaRole;
 use Illuminate\Database\Eloquent\Factories\Factory;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
 
 class ProcessFactory extends Factory
 {
-    /**
-     * The name of the factory's corresponding model.
-     *
-     * @var class-string<Process>
-     */
+    /** @var class-string<Process> */
     protected $model = Process::class;
-    /**
-     * Define the model's default state.
-     *
-     * @return array<string, mixed>
-     */
+
+    public function configure(): static
+    {
+        return $this->afterMaking(function (Process $process): void {
+            // Keep the original required column aligned with the canonical owner_id.
+            $process->owner = $process->owner_id;
+        });
+    }
+
+    /** @return array<string, mixed> */
     public function definition(): array
     {
         return [
             'title' => $this->faker->sentence(),
             'description' => $this->faker->paragraphs(3, true),
-            'steps' => $this->faker->word(),
-            'owner' => \App\Models\Employee::factory(),
-            'owner_id' => \App\Models\Employee::factory(),
+            'steps' => [],
+            'owner_id' => Employee::factory(),
             'main_topic' => $this->faker->word(),
-            'visibile_to' => $this->faker->word()
+            'visible_to' => fn (): array => ($roleId = HexaRole::query()->where('guard', (string) config('mcp.domain_permission_guard', config('auth.defaults.guard', 'web')))->value('id')) ? [(int) $roleId] : [],
         ];
     }
 }

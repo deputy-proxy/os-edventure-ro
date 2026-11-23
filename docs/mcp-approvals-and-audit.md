@@ -2,9 +2,9 @@
 
 ## Status and boundary
 
-Issue #532 implements the approval and audit infrastructure required before controlled MCP writes. The registry now contains 30 read-only tools from #533–#536 and the six approval-gated business operations introduced by #537. The six operations are create_task, update_task, assign_task, complete_task, create_customer_interaction and create_customer_lead. Each is exposed as a request tool plus an execution companion; the request never mutates business data.
+Issue #532 implements the approval and audit infrastructure required before controlled MCP writes. The registry now contains 48 read-only tools and nine approval-gated operations. The six #537 operations are create_task, update_task, assign_task, complete_task, create_customer_interaction and create_customer_lead. Issue #575 adds create_process, update_process and delete_process. Each is exposed as a request tool plus an execution companion; the request never mutates business data.
 
-Every current write tool uses the approval service and its task/CRM domain action. A tool must not mutate domain data directly from its initial MCP request. The execution companion accepts only approval_id and executes the immutable encrypted payload. This infrastructure does not replace domain-specific authorization, record scoping, field allowlists, or service-level validation.
+Every current write tool uses the approval service and its existing domain action/workflow, including the descriptive process-definition workflow added by #575. A tool must not mutate domain data directly from its initial MCP request. The execution companion accepts only approval_id and executes the immutable encrypted payload. This infrastructure does not replace domain-specific authorization, record scoping, field allowlists, or service-level validation.
 
 ## Persistence
 
