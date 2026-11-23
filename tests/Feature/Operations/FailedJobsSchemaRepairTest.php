@@ -1,12 +1,12 @@
 <?php
 
-namespace Tests\\Feature\\Operations;
+namespace Tests\Feature\Operations;
 
-use Illuminate\\Foundation\\Testing\\RefreshDatabase;
-use Illuminate\\Support\\Facades\\DB;
-use Illuminate\\Support\\Facades\\Schema;
-use Illuminate\\Support\\Str;
-use Tests\\TestCase;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
+use Tests\TestCase;
 
 class FailedJobsSchemaRepairTest extends TestCase
 {
