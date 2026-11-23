@@ -1,8 +1,8 @@
 # MCP setup and operations guide
 
-Last reconciled with the repository implementation: 2026-11-22.
+Last reconciled with the repository implementation: 2026-11-23.
 
-This is the operational entry point for the os-edventure-ro MCP integration. It describes committed application behavior and the currently documented ChatGPT connection flow. It is not evidence that the production endpoint, reverse proxy, or a live ChatGPT workspace has passed end-to-end acceptance.
+This is the operational entry point for the os-edventure-ro MCP integration. It describes committed application behavior and the verified ChatGPT connection flow. A live ChatGPT workspace has successfully connected to this MCP server, discovered its tools, and executed tool calls. This verifies ChatGPT interoperability for the tested connection; it does not by itself establish production hosting, proxy, streaming, or full operational readiness.
 
 ## 1. Current capability and safety boundary
 
@@ -104,7 +104,7 @@ Current Help Center flow:
 The Help Center also documents a legacy Apps flow. Follow the current workspace UI rather than assuming legacy navigation remains present. Custom MCP connections are web-only.
 
 During OAuth, an authenticated os-edventure-ro user completes consent. The Passport token subject is the dedicated AI Assistant principal, not the human who approved the connection. The default redirect allowlist contains https://chatgpt.com; add another callback origin only if OpenAI documents it for the selected workspace flow and it has been reviewed. Never use a wildcard.
-OpenAI's connection guide requires an OAuth provider that issues refresh tokens and recommends that OpenID Connect discovery advertise offline_access (or an equivalent refresh capability). This application currently advertises authorization_code and refresh_token in grant_types_supported, but its scopes_supported list does not include offline_access. The refresh-token grant is implemented and tested locally, but whether ChatGPT accepts that metadata as the equivalent capability has not been verified. Treat this as an explicit interoperability gate: inspect the live discovery metadata and complete a real workspace OAuth test; if ChatGPT requires offline_access, track and implement that scope before claiming the connection is supported.
+OpenAI's connection guide recommends refresh-token support and advertising offline_access (or an equivalent refresh capability) in discovery metadata. This application advertises authorization_code and refresh_token in grant_types_supported; scopes_supported does not include offline_access. The successful live ChatGPT OAuth connection demonstrates that the tested workspace accepts the current metadata and completes authentication. Keep the metadata discrepancy documented, but it is no longer an interoperability blocker for the tested connection. Revisit it only if another supported ChatGPT workspace/client requires offline_access explicitly.
 
 Test a low-risk read tool first and confirm output is limited to the AI principal's permissions. A successful tool scan does not prove every tool is authorized or production-ready. Test task/CRM writes only in a controlled environment with a designated independent human reviewer and the os-edventure-ro approval workflow enabled.
 
@@ -112,7 +112,7 @@ ChatGPT may ask users to confirm write actions, but that UI confirmation does no
 
 Workspace apps use a reviewed snapshot of discovered tool definitions. When server schemas or metadata change, an administrator must refresh/review the tool list and publish the updated version as required by the workspace UI. Server-side changes do not automatically become enabled workspace actions.
 
-**Interoperability status:** automated tests cover OAuth discovery, public-client registration, callback allowlisting, PKCE S256, resource/audience binding, authorization-code exchange, refresh-token rotation, replay rejection, and token revocation. A live ChatGPT workspace connection and the deployed public HTTPS/reverse-proxy request lifecycle have not been recorded as end-to-end verified. Do not describe them as production-validated until evidence is retained.
+**Interoperability status:** a live ChatGPT workspace has successfully connected to this MCP server, discovered the available tools, and executed MCP tool calls. This demonstrates end-to-end ChatGPT/MCP interoperability for the tested connection. Automated tests additionally cover OAuth discovery, public-client registration, callback allowlisting, PKCE S256, resource/audience binding, authorization-code exchange, refresh-token rotation, replay rejection, and token revocation. The deployed public HTTPS/reverse-proxy request lifecycle, streaming behavior, and production hosting limits remain separate staging verification items and must not be described as verified based solely on the successful ChatGPT connection.
 
 ## 5. Provision and manage the AI principal
 
@@ -187,9 +187,9 @@ Before enabling the endpoint for a real workspace, verify in the target environm
 - the scheduler invokes Laravel schedule:run every minute so approval expiry/recovery runs;
 - the AI principal has only reviewed permissions and designated human reviewers have separate approval/audit permissions;
 - audit access, retention, monitoring, incident response, backup, and recovery procedures are approved and tested;
-- the live ChatGPT workspace connection and safe read/write approval flow have been exercised and recorded.
+- the live ChatGPT workspace connection, tool discovery, and tool invocation have been exercised; separately verify the safe read/write approval flow in the target environment before enabling controlled writes.
 
-The repository records a read-only Hostinger runtime snapshot from 2026-11-19, but it does not prove the deployed /mcp request lifecycle. CDN/proxy buffering, effective PHP-FPM timeout behavior, multi-instance topology, and live ChatGPT interoperability remain staging verification items. Follow [production operations and recovery](operations-and-recovery.md) for general release, health, queue, scheduler, backup, incident, and recovery procedures. Green CI does not prove hosting compatibility.
+The repository records a read-only Hostinger runtime snapshot from 2026-11-19, but it does not prove the deployed /mcp request lifecycle. CDN/proxy buffering, effective PHP-FPM timeout behavior, multi-instance topology, and the safe read/write approval workflow remain staging verification items. Live ChatGPT interoperability has been demonstrated separately. Follow [production operations and recovery](operations-and-recovery.md) for general release, health, queue, scheduler, backup, incident, and recovery procedures. Green CI does not prove hosting compatibility.
 
 Deployment must follow the approved release process: reviewed PR, green required CI, verified backup, migration preflight, one authorized migration execution, cache refresh, queue-worker restart where applicable, and post-deploy health/workflow checks. Never run migrations concurrently from multiple replicas or roll back schema changes without reviewing the migration's data-preservation behavior.
 
