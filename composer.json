@@ -38,7 +38,6 @@
         "laravel/reverb": "^1.0",
         "laravel/sanctum": "^4.0",
         "laravel/tinker": "^3.0.2",
-        "lartisan/filament-architect": "^1.0",
         "mcp/sdk": "^0.10.0",
         "nyholm/psr7": "^1.8.2",
         "rappasoft/laravel-authentication-log": "^6.0",
