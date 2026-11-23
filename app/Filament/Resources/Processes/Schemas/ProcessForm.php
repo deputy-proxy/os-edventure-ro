@@ -1,14 +1,15 @@
 <?php
+
 namespace App\Filament\Resources\Processes\Schemas;
 
 use Filament\Forms;
-use Filament\Schemas\Schema;
-use Filament\Schemas\Components\Section;
 use Filament\Forms\Components\Builder;
 use Filament\Forms\Components\Builder\Block;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
+use Filament\Schemas\Components\Section;
+use Filament\Schemas\Schema;
 use Hexters\HexaLite\Models\HexaRole;
 
 class ProcessForm
@@ -21,20 +22,20 @@ class ProcessForm
                 Section::make('General Information')
                     ->description('Basic details about this process.')
                     ->schema([
-                        Forms\Components\TextInput::make('title')
+                        TextInput::make('title')
                             ->required()
                             ->columnSpanFull(),
-                        Forms\Components\Textarea::make('description')
+                        Textarea::make('description')
                             ->required()
                             ->columnSpanFull(),
-                        Forms\Components\TextInput::make('main_topic')
+                        TextInput::make('main_topic')
                             ->required(),
                     ]),
 
                 Section::make('Ownership & Visibility')
                     ->description('Define who owns this process and who can see it.')
                     ->schema([
-                        Forms\Components\Select::make('owner_id')
+                        Select::make('owner_id')
                             ->relationship('owner', 'full_name')
                             ->required(),
                         Forms\Components\CheckboxList::make('visible_to')
@@ -59,11 +60,11 @@ class ProcessForm
                                             ->label('Title')
                                             ->required(),
                                         Select::make('actor')
-                                            ->options([
+                                            ->options(
                                                 HexaRole::query()
                                                     ->pluck('name', 'id')
                                                     ->toArray()
-                                            ])
+                                            )
                                             ->required(),
                                         Textarea::make('content')
                                             ->label('Description')

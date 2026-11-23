@@ -1,6 +1,6 @@
 # MCP permission matrix
 
-**Matrix version:** 1.6.0 (configured by mcp.permission_matrix_version)
+**Matrix version:** 1.7.0 (configured by mcp.permission_matrix_version)
 
 This document is the operator-facing companion to `config/mcp.php`. The configuration is the runtime source of truth. Every registered MCP tool must have exactly one entry under `mcp.tool_permissions`; the server refuses to register a tool without one.
 
@@ -77,6 +77,13 @@ Example only. Do not add it until the named tool, domain service, record scope, 
 
 These scopes are not interchangeable. Add a dedicated scope implementation when the domain's real visibility rule differs.
 
+## Process record scope (#575)
+
+- `McpProcessRecordScope`: process definitions are visible only when the principal currently holds at least one HexaLite role ID listed in the process's `visible_to` JSON field. Process ownership does not bypass this restriction. Reads include soft-deleted definitions to match the Filament resource; update/delete target active definitions only.
+- `get_process_tasks` applies both the process visibility scope and `McpTaskRecordScope` to associated tasks.
+
+See [MCP process tools](mcp-process-tools.md) for the complete field contract, stored step format, visibility behavior, and approval workflow.
+
 ## Sensitive data
 
 The default is exclusion. Do not expose finance, HR, student, customer, employee, payroll, banking, authentication, or other personal/sensitive fields unless the exact field is explicitly approved and added to a tool's allowlist. Relationships are excluded unless nested allowlists name their permitted fields. A parent field allowlist never implicitly authorizes nested data.
@@ -91,7 +98,7 @@ Never assign Owner/superadmin or copy a human user's role set to the AI principa
 
 ## Current state
 
-Issues #533–#536 register 30 read-only executive, finance, CRM and operations tools. Issue #537 adds six approval-gated business operations, each represented by a request tool and an execution companion. Issue #539 adds fourteen read-only tools for HR/payroll, products, marketing and academic operations. The matrix therefore contains 56 tools: 44 read tools and 12 write request/execution tools. Executive tools use `overview-dashboard.view` (with `kpi_alert.view_own` for alerts); finance tools declare granular permissions for dashboard, transactions, receivables/payables, forecasts, budgets, profitability, reconciliation and invoice detail. Optional source permissions are evaluated independently. The AI principal receives no domain permissions automatically. Operators must explicitly assign only reviewed permissions declared in the runtime matrix. See [MCP executive tools](mcp-executive-tools.md), [MCP finance tools](mcp-finance-tools.md), [MCP CRM tools](mcp-crm-tools.md), [MCP operations tools](mcp-operations-tools.md), and [MCP extended domain tools](mcp-extended-domain-tools.md) for schemas, sources, and limitations.
+Issues #533–#536 register 30 read-only executive, finance, CRM and operations tools. Issue #537 adds six approval-gated business operations, each represented by a request tool and an execution companion. Issue #539 adds fourteen read-only tools for HR/payroll, products, marketing and academic operations. Issue #575 adds four role-scoped process read tools and three approval-gated process-definition operations. The matrix therefore contains 66 tools: 48 read tools and 18 write request/execution tools. Executive tools use `overview-dashboard.view` (with `kpi_alert.view_own` for alerts); finance tools declare granular permissions for dashboard, transactions, receivables/payables, forecasts, budgets, profitability, reconciliation and invoice detail. Optional source permissions are evaluated independently. The AI principal receives no domain permissions automatically. Operators must explicitly assign only reviewed permissions declared in the runtime matrix. See [MCP executive tools](mcp-executive-tools.md), [MCP finance tools](mcp-finance-tools.md), [MCP CRM tools](mcp-crm-tools.md), [MCP operations tools](mcp-operations-tools.md), [MCP process tools](mcp-process-tools.md), and [MCP extended domain tools](mcp-extended-domain-tools.md) for schemas, sources, and limitations.
 
 
 ## CRM and sales tool permission matrix
@@ -138,6 +145,25 @@ Task tools use the task resource's assigned/created visibility scope unless task
 
 Operations outputs exclude task descriptions, creator IDs, taskable IDs and dependency records; project descriptions and budgets; objective descriptions and employee IDs; and meeting descriptions and participant identities. Task lists, details, overdue results and bottleneck aggregates apply McpTaskRecordScope before filters/counts/aggregation. Overdue means a non-null due date strictly earlier than the Europe/Bucharest as-of date and status not equal to done. Unknown statuses are preserved as stored. See [MCP operations tools](mcp-operations-tools.md) for full schemas, output fields and date/status semantics.
 
+## Process tool permission matrix (#575)
+
+Process definitions are role-scoped by `visible_to`. The owner does not bypass the selected-role visibility restriction. Associated task reads additionally apply the existing task assignment/creator scope.
+
+| Tool | OAuth scope | Required permissions | Optional permissions |
+| --- | --- | --- | --- |
+| get_processes | mcp.processes.list.read | process.index | — |
+| get_process_details | mcp.processes.detail.read | process.index | — |
+| get_process_steps | mcp.processes.steps.read | process.index | — |
+| get_process_tasks | mcp.processes.tasks.read | process.index, task.index | task.view_all |
+| create_process | mcp.processes.create.request | process.create | — |
+| execute_create_process | mcp.processes.create.execute | process.create | — |
+| update_process | mcp.processes.update.request | process.update | — |
+| execute_update_process | mcp.processes.update.execute | process.update | — |
+| delete_process | mcp.processes.delete.request | process.delete | — |
+| execute_delete_process | mcp.processes.delete.execute | process.delete | — |
+
+Process list/detail/steps reads include soft-deleted definitions to match the Filament resource. Update/delete requests target active definitions only, require an expected updated timestamp, and re-check visibility at execution. All three writes use independent human approval. The step payload remains descriptive JSON and is never executed. See [MCP process tools](mcp-process-tools.md).
+
 ## Human approval and audit permissions
 
 Issue #532 adds three separate os-edventure-ro staff permissions:
@@ -148,7 +174,7 @@ Issue #532 adds three separate os-edventure-ro staff permissions:
 
 Assign these only to designated human reviewers/auditors. The configured AI principal is explicitly denied access even if it is accidentally assigned one of these permissions. The Filament resources are read-only except for the approve/reject actions; model/service guards preserve the same boundary server-side. See [MCP approval and execution audit controls](mcp-approvals-and-audit.md).
 
-All 56 tools are registered with explicit tool scopes, required and optional domain permissions, record scopes, and output-field allowlists. The six #537 business operations are approval-gated: request tools create pending approvals and execution companions accept only approval_id. No other business mutations are exposed. Every future write must use payload-bound approval, an independent human reviewer, execution-time authorization, and an existing domain service.
+All 66 tools are registered with explicit tool scopes, required and optional domain permissions, record scopes, and output-field allowlists. The six #537 task/CRM operations and three #575 process-definition operations are approval-gated: request tools create pending approvals and execution companions accept only approval_id. No other business mutations are exposed. Process-definition writes do not execute process steps or create tasks. Every future write must use payload-bound approval, an independent human reviewer, execution-time authorization, and an existing domain service.
 
 
 ## Finance tool permission matrix

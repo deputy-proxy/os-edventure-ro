@@ -138,7 +138,7 @@ class McpTransportTest extends TestCase
             $tools = [...$tools, ...$page->json('result.tools', [])];
             $cursor = $page->json('result.nextCursor');
         }
-        $this->assertCount(56, $tools);
+        $this->assertCount(66, $tools);
         $this->assertEqualsCanonicalizing([
             'get_executive_overview', 'get_management_kpis', 'get_kpi_alerts', 'get_business_health',
             'get_management_priorities', 'get_period_comparison', 'get_financial_overview', 'get_transactions',
@@ -157,6 +157,9 @@ class McpTransportTest extends TestCase
             'get_product_catalogue', 'get_product_cost_summary', 'get_product_profitability',
             'get_campaign_performance', 'get_google_ads_import_status', 'get_market_observations',
             'get_academic_overview', 'get_attendance_summary', 'get_group_operations',
+            'get_processes', 'get_process_details', 'get_process_steps', 'get_process_tasks',
+            'create_process', 'update_process', 'delete_process',
+            'execute_create_process', 'execute_update_process', 'execute_delete_process',
         ], array_column($tools, 'name'));
 
         $resources = $this->mcpPost([
