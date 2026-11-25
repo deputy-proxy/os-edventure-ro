@@ -49,6 +49,16 @@ The source of truth is **config/mcp.php** and **.env.example**.
 APP_URL, APP_KEY, database settings, and Passport signing keys are also required by Laravel. Keep .env, APP_KEY, storage/oauth-private.key, and all environment credentials outside source control. Protect the Passport private key and include it in the environment's approved secure key-backup process. Keep `APP_DEBUG=false` in production; the committed `.env.example` uses this safe default.
 
 The `/ready` endpoint checks database connectivity and validates both Passport signing keys, including their file permissions; it returns `503 not_ready` when either dependency is unhealthy. Composer's `post-autoload-dump` hook applies mode `0600` to existing file-backed Passport private/public keys after dependency installation. It never generates, rotates, reads, or changes key contents. If a deployment still reports a Passport key permission error, repair the existing files over SSH from the application root with `chmod 600 storage/oauth-private.key storage/oauth-public.key`, then refresh Laravel's cached configuration with `php artisan config:clear && php artisan config:cache`. Verify modes with `stat -c '%a %n' storage/oauth-private.key storage/oauth-public.key`; both should report `600`. Do not run `passport:keys --force` as a permissions repair because it replaces the signing keys and invalidates existing tokens.
+
+For the #586 custody check, run these read-only commands from the deployed application root; do not `cat`, copy, or paste either key:
+
+~~~sh
+stat -c '%a %U:%G %n' storage/oauth-private.key storage/oauth-public.key
+namei -l storage/oauth-private.key storage/oauth-public.key
+curl -fsS -o /dev/null -w '%{http_code}\n' "$PUBLIC_APP_URL/ready"
+~~~
+
+Both file-backed keys must report mode `600`. Because mode `0600` grants access only to the file owner, verify that the owner is the PHP runtime identity that must read the key; also inspect each parent directory in `namei` for appropriate traversal permissions. Do not broaden key modes to solve an ownership mismatch. If Passport keys are configured as inline PEM environment values, record only that they are inline and omit the values entirely. Separately confirm in the restricted operational record that the private key is included in the approved encrypted backup/custody process, who is authorized to access that backup, and when its restore procedure was last tested. Do not put vault names, access lists, or other sensitive custody details in a public issue or this repository. `GET /ready` validates key usability and database connectivity; it does not prove backup custody or restoreability.
 The MCP route is limited to 60 requests per minute per source IP. The default request-body limit is 1 MiB and the non-CLI application timeout cap is 25 seconds. These application limits do not override lower reverse-proxy, PHP-FPM, CDN, or hosting limits.
 
 ## 3. Local development and protocol inspection
@@ -118,7 +128,17 @@ Workspace apps use a reviewed snapshot of discovered tool definitions. When serv
 
 The configured identity must be a dedicated user with exactly one global HexaLite role named Assistant for the active guard. The role must not be tenant-scoped. Grant only domain permissions explicitly mapped by the runtime MCP permission matrix and approved for that environment. OAuth scopes do not replace underlying domain permissions.
 
-After migrations and role setup:
+### Owner-approved development exception (2026-11-25)
+
+The owner explicitly decided that the existing development MCP Assistant principal **retains Filament `/admin` panel access**. Its current Assistant role permissions are also retained unchanged (owner-reported count: 309). The existing `APP_ENV` and `APP_DEBUG` values are unchanged. This is a temporary development decision, not production-readiness approval or authorization to widen access further. Revisit panel access, environment flags, and least-privilege permission scope before any production-readiness/public-production sign-off.
+
+`User::canAccessPanel()` admits a non-owner account when an assigned role has at least one non-empty permission. Panel admission does not replace resource/page authorization: individual resources and pages continue to enforce their own permission checks. A regression test records the owner's current decision using a 309-permission Assistant role and verifies that it can load `/admin`.
+
+The current `mcp:provision-principal` command is intentionally stricter than this temporary development configuration: it rejects Assistant permissions outside the MCP permission matrix and rejects panel access. **Do not run it against the existing development principal as a verification or repair step.** Its refusal is expected while the owner-approved 309-permission/panel-access decision remains in force. Reconcile the command and principal only under a separately authorized least-privilege change.
+
+The repository-side inspection did not have access to the live Hostinger Passport key files. The owner-supplied runtime snapshot in issue #586 reported `APP_ENV=local`, `APP_DEBUG=true`, 309 Assistant permissions, and `canAccessPanel=true`; treat those as owner-reported values until rechecked in the target environment.
+
+For a new environment whose owner has approved the matrix-only, no-panel-access principal model, run the provisioning command after migrations and role setup:
 
 ~~~sh
 php artisan mcp:provision-principal
@@ -127,6 +147,14 @@ php artisan mcp:provision-principal
 The command creates the configured user with a random undisclosed password and attaches the global Assistant role, or verifies an existing AI Assistant account. It refuses unexpected roles, panel access, missing/duplicate Assistant roles, and permissions not declared by the matrix. It does not copy a human user's permissions. Keep the Assistant role attached even when no domain permissions are assigned; the application's legacy permission helper treats users without roles as implicitly authorized, while the explicit role preserves deny-by-default behavior.
 
 Passport access tokens default to 60 minutes and refresh tokens to 30 days. The OAuth refresh flow is covered by automated tests. The AI principal's random password is not a routine ChatGPT credential and must not be distributed.
+
+For a read-only, sanitized runtime snapshot of the configured principal, run the following from the deployed application root. It reports environment flags, role names/guard/team scope, permission counts and fingerprints, panel admission, and counts of currently valid access/refresh tokens. It does not print permission names, user email/ID, token IDs, token values, or key material:
+
+~~~sh
+php artisan tinker --execute='$email = config("mcp.ai_principal_email"); $user = \App\Models\User::query()->where("email", $email)->first(); $roles = $user?->roles()->get() ?? collect(); $grants = $roles->map(function ($role) { $keys = collect(\Illuminate\Support\Arr::flatten($role->access ?? []))->filter(fn ($value) => is_string($value) && trim($value) !== "")->unique()->sort()->values(); return ["name" => $role->name, "guard" => $role->guard, "team_scoped" => $role->team_id !== null, "permission_count" => $keys->count(), "permission_fingerprint_sha256" => hash("sha256", $keys->implode("\n"))]; }); $tokenIds = $user ? \Illuminate\Support\Facades\DB::table("oauth_access_tokens")->where("user_id", $user->getKey())->pluck("id") : collect(); dump(["app_env" => config("app.env"), "app_debug" => (bool) config("app.debug"), "principal_found" => $user !== null, "principal_name" => $user?->name, "roles" => $grants->all(), "panel_access" => $user?->canAccessPanel(\Filament\Facades\Filament::getPanel("admin")), "active_access_tokens" => \Illuminate\Support\Facades\DB::table("oauth_access_tokens")->whereIn("id", $tokenIds)->where("revoked", false)->where("expires_at", ">", now())->count(), "active_refresh_tokens" => \Illuminate\Support\Facades\DB::table("oauth_refresh_tokens")->whereIn("access_token_id", $tokenIds)->where("revoked", false)->where("expires_at", ">", now())->count()]);'
+~~~
+
+Record the sanitized output in the restricted operational/change record. Compare the permission count and fingerprint with the previously approved snapshot; do not publish the 309 individual permission keys unless a reviewer specifically needs them. Token counts are a point-in-time inventory, not proof of refresh-token rotation; automated OAuth tests cover authorization-code exchange, refresh-token rotation/replay rejection, and revocation. The focused regression command is `php artisan test tests/Feature/ProvisionMcpPrincipalTest.php tests/Feature/McpOAuthTest.php tests/Feature/Filament/PanelAccessAuthorizationTest.php`. The full owner decision and outstanding live evidence are tracked in [MCP identity boundaries and Passport key custody](mcp-identity-boundaries-and-passport-key-custody.md).
 
 For suspected token compromise or emergency disconnection:
 

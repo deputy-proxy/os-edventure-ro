@@ -8,6 +8,8 @@ The `/admin` Filament panel uses the application's existing HexaLite role/permis
 
 This explicit admission check is important because the bundled HexaLite helper treats users without roles as superadmins when evaluating individual permissions. That helper behavior must not be used as the panel-admission rule.
 
+The owner-approved development exception for the MCP Assistant principal, including its retained `/admin` panel access and unchanged permission set, is recorded in [MCP identity boundaries and Passport key custody](mcp-identity-boundaries-and-passport-key-custody.md). This exception does not change the general admission rule or grant access to resources beyond their own permission checks.
+
 Before deploying this change, inventory the existing production user-role assignments. Any currently authorized staff account without a role, or with a role whose permission map is empty, will be denied panel access until its access is explicitly provisioned. Do not solve this by adding a blanket fallback or automatically granting administrator permissions.
 
 ## Provisioning an administrator
