@@ -32,11 +32,11 @@ Catalogue prices are resolved through the existing `ProductsOverviewData` servic
 
 | Tool | OAuth scope | Required domain permission | Output |
 | --- | --- | --- | --- |
-| `get_campaign_performance` | `mcp.marketing.campaign-performance.read` | `paid_campaign.index` | Paid campaign status counts and Google Ads daily metric aggregates |
-| `get_google_ads_import_status` | `mcp.marketing.google-ads-imports.read` | `paid_campaign.index` | Import configuration status, freshness and recent batch metadata |
-| `get_market_observations` | `mcp.marketing.market-observations.read` | `competitor_offer.index`, `market_trend.index` | Stored competitor offer and Market Trends observations |
+| `get_campaign_performance` | `mcp.marketing.campaign-performance.read` | `google_ads_metrics.view` | Google Ads daily metric aggregates only |
+| `get_google_ads_import_status` | `mcp.marketing.google-ads-imports.read` | `google_ads_metrics.view` | Import configuration status, freshness and recent batch metadata |
+| `get_market_observations` | `mcp.marketing.market-observations.read` | `market_trend.index` | Stored Market Trends observations only |
 
-Google Ads metrics retain the source reporting period and currency-specific totals. Cost is reported in micros of the source currency. Import responses omit account/customer identifiers, selected campaign IDs, credential references and secret material. Market observations retain source, observation time, effective period, unit, quality, verification and freshness metadata. This is a read of stored observations only: MCP does not initiate Market Trends ingestion or live competitor research. Market Trends ingestion remains a separate capability related to #297/#299.
+Google Ads metrics retain the source reporting period and currency-specific totals. Cost is reported in micros of the source currency. Import-status responses omit account/customer identifiers, selected campaign IDs, credential references and secret material. Campaign-performance responses expose imported Google Ads campaign IDs/names alongside their aggregate metrics. Market Trends observations retain source, observation time, effective period, unit, quality, verification and freshness metadata. This is a read of stored observations only: MCP does not initiate Market Trends ingestion. PaidCampaign and competitor-offer data have been removed from these payloads. Market Trends ingestion remains a separate capability related to #297/#299.
 
 ## Academic operations
 
@@ -50,7 +50,7 @@ Academic outputs do not contain student names, identifiers, dates of birth, cont
 
 ## Authorization and enablement
 
-All fourteen tools are read-only. Each call requires the configured Assistant principal, `mcp:use`, its dedicated OAuth scope, and every required HexaLite domain permission. The wrapper records success/failure audits and filters the returned payload through the tool's explicit allowlist. The Assistant role must receive only the exact permissions required by the tools that are enabled.
+All fourteen tools are read-only. Each call requires the configured Assistant principal, `mcp:use`, its dedicated OAuth scope, and every required HexaLite domain permission. The wrapper records success/failure audits and filters the returned payload through the tool's explicit allowlist. The Assistant role must receive only the exact permissions required by the tools that are enabled. Google Ads metrics use the independent `google_ads_metrics.view` permission; they no longer borrow `paid_campaign.index`. Market observations depend only on `market_trend.index`.
 
 The `McpGlobalRecordScope` declaration is used only for the all-record aggregate contracts described above. No tool accepts record identifiers or returns unrestricted person-level collections. If a future requirement needs employee, student, payroll or other individual-level records, add a dedicated record-scope contract and a separately reviewed field allowlist rather than widening these tools.
 

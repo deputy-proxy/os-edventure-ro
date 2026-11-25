@@ -6,8 +6,6 @@ use App\Models\Article;
 use App\Models\Customer;
 use App\Models\CustomerLead;
 use App\Models\Employee;
-use App\Models\Newsletter;
-use App\Models\PaidCampaign;
 use App\Models\Project;
 use App\Models\Student;
 use App\Models\Task;
@@ -51,8 +49,6 @@ class AdminOverviewDashboardData
 
         $contentTypes = [
             ['Article records', 'article.index', Article::class, 'article.index_url'],
-            ['Newsletter records', 'newsletter.index', Newsletter::class, 'newsletter.index_url'],
-            ['Paid campaign records', 'paid_campaign.index', PaidCampaign::class, 'paid_campaign.index_url'],
         ];
         foreach ($contentTypes as [$label, $permission, $model, $urlKey]) {
             $addMetric($label, $permission, fn (): int => $model::query()->count(), 'Non-deleted records of this content type; types are kept separate because their lifecycle states differ.', $permissions[$urlKey] ?? null);
@@ -79,8 +75,6 @@ class AdminOverviewDashboardData
             'project.index' => Project::class,
             'task.index' => Task::class,
             'article.index' => Article::class,
-            'newsletter.index' => Newsletter::class,
-            'paid_campaign.index' => PaidCampaign::class,
         ] as $permission => $model) {
             if (! ($permissions[$permission] ?? false)) {
                 continue;

@@ -138,7 +138,7 @@ class MarketAdvertisingAnalyticsWorkflowTest extends TestCase
         $role = $roleClass::create([
             'name' => 'Synthetic advertising dashboard viewer '.uniqid(),
             'created_by_name' => 'Test',
-            'access' => ['Marketing' => ['market-analysis.view', 'paid_campaign.index']],
+            'access' => ['Marketing' => ['market-analysis.view', 'google_ads_metrics.view']],
             'guard' => 'web',
         ]);
         $user->roles()->attach($role->getKey());

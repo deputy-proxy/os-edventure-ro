@@ -2,7 +2,6 @@
 
 namespace App\Filament\Resources\ProductResourceAllocations\Schemas;
 
-use App\Models\PaidCampaign;
 use App\Models\Product;
 use App\Models\Project;
 use Filament\Forms;
@@ -25,7 +24,6 @@ class ProductResourceAllocationForm
                     ->options([
                         'product' => 'Product',
                         'project' => 'Project',
-                        'paid_campaign' => 'Paid campaign',
                     ])
                     ->required()
                     ->live()
@@ -38,7 +36,6 @@ class ProductResourceAllocationForm
                         return match ($get('targetable_type')) {
                             'product' => Product::query()->orderBy('title')->pluck('title', 'id')->all(),
                             'project' => Project::query()->orderBy('title')->pluck('title', 'id')->all(),
-                            'paid_campaign' => PaidCampaign::query()->orderBy('title')->pluck('title', 'id')->all(),
                             default => [],
                         };
                     }),

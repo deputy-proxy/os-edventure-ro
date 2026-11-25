@@ -103,10 +103,10 @@
         <section aria-labelledby="recent-publications-heading" class="space-y-3">
             <div>
                 <h2 id="recent-publications-heading" class="text-lg font-semibold text-gray-950 dark:text-white">Recent publications</h2>
-                <p class="text-sm text-gray-600 dark:text-gray-300">{{ $dashboard['recent_start'] }} through {{ $dashboard['recent_end'] }} inclusive. Only current articles and social posts with status exactly <code>published</code> and a matching publication date are counted.</p>
+                <p class="text-sm text-gray-600 dark:text-gray-300">{{ $dashboard['recent_start'] }} through {{ $dashboard['recent_end'] }} inclusive. Only current articles with status exactly <code>published</code> and a matching publication date are counted.</p>
             </div>
             <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
-                @foreach (['articles', 'social_posts'] as $key)
+                @foreach (['articles'] as $key)
                     @php($type = $dashboard['content_types'][$key])
                     <x-filament::section>
                         <div class="flex items-start justify-between gap-3">
@@ -135,7 +135,7 @@
                     </x-filament::section>
                 @endforeach
             </div>
-            <p class="text-sm text-gray-500 dark:text-gray-400">Newsletter delivery and paid-campaign launch dates are not labeled as publication events because those types do not have a controlled, consistent publication status.</p>
+            <p class="text-sm text-gray-500 dark:text-gray-400"></p>
         </section>
 
         <section aria-labelledby="moderation-queue-heading" class="space-y-3">
@@ -167,9 +167,9 @@
             <h2 id="content-data-notes-heading" class="text-lg font-semibold text-gray-950 dark:text-white">Data notes</h2>
             <x-filament::section>
                 <ul class="list-disc space-y-1 pl-5 text-sm text-gray-600 dark:text-gray-300">
-                    <li>Status values for articles, newsletters, social posts, and paid campaigns are grouped and displayed exactly as stored. These fields are free text, so statuses are not mapped into a shared lifecycle.</li>
+                    <li>Article status values are grouped and displayed exactly as stored. The field is free text, so statuses are not mapped into a shared lifecycle.</li>
                     <li>Inventory status distributions, upcoming records, and recent publications exclude soft-deleted records; soft-deleted counts are shown separately.</li>
-                    <li>Upcoming lists use <code>scheduled_on</code> for articles, newsletters, and social posts, and <code>scheduled_to_start_on</code> for paid campaigns. A future date alone does not guarantee that a record is queued for publication.</li>
+                    <li>Upcoming article lists use <code>scheduled_on</code>. A future date alone does not guarantee that a record is queued for publication.</li>
                     <li>Reach, clicks, opens, reactions, and engagement rates are unavailable because the supported content schemas do not store those measurements.</li>
                     <li>Every count and quick link requires the matching resource list/create permission. The <code>content-management.view</code> page gate does not grant access to content records.</li>
                 </ul>

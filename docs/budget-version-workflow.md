@@ -1,6 +1,6 @@
 # Versioned budget workflow
 
-os-edventure-ro stores budgets in a dedicated ledger. The legacy integer `projects.budget` and `paid_campaigns.budget` fields remain unchanged and are not imported, inferred, or treated as canonical budget values.
+os-edventure-ro stores budgets in a dedicated ledger. The legacy integer `projects.budget` field is not imported, inferred, or treated as a canonical budget value. The PaidCampaign model/table has been retired under issue #578; older references to `paid_campaigns.budget` are historical only.
 
 ## Data contract
 

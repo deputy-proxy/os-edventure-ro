@@ -287,7 +287,7 @@ Reuse `TasksAndProjectsData`, task resources/actions and escalation services. En
 ### Products, marketing and academic operations (Release 4)
 
 - Products: approved product, price, cost and profitability views, preserving effective dates, currencies and calculation provenance.
-- Marketing: campaign performance, Google Ads imports, competitor and Market Trends observations, always showing source, observed period, units, quality and freshness. Market Trends ingestion is a separate future capability related to #297/#299, not assumed to exist.
+- Marketing: Google Ads imports/performance and Market Trends observations, always showing source, observed period, units, quality and freshness. Competitor and PaidCampaign domain ownership has since been retired under issue #578. Market Trends ingestion is a separate future capability related to #297/#299, not assumed to exist.
 - Academic: limited student/group/session/attendance operational summaries with strict student privacy, role scope and minimum necessary fields. No bulk student export by default.
 
 ## 9. MCP resources and prompts

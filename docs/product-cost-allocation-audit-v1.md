@@ -1,5 +1,7 @@
 # Product cost allocation: current-state audit v1
 
+> **Scope update (2026-11-25):** PaidCampaign has been retired from the active application under issue #578. Current product-cost allocation rules support Product and Project targets only. Historical allocation snapshots are retained as historical records and are not rewritten.
+
 **Status:** Engineering audit; not an approved accounting policy  
 **Date:** 2026-10-27  
 **Related roadmap:** [Issue #353](https://github.com/deputy-proxy/os-edventure-ro/issues/353) and [Issue #354](https://github.com/deputy-proxy/os-edventure-ro/issues/354)
@@ -66,7 +68,7 @@ This audit makes the current implementation and open decisions reviewable. It do
 
 Issue #353 adds an application-side attribution contract without declaring an accounting policy:
 
-- Allocation rules can target the existing Product, Project, and PaidCampaign records. Existing product allocations are retained and backfilled to the `product` target alias.
+- Allocation rules can target Product and Project records. Existing allocations to the retired PaidCampaign target are detached by the retirement migration; historical snapshots are retained for audit and are not recalculated as active allocations.
 - Allocation percentages are validated as 0–100 per rule and may not total more than 100. Any remainder is recorded as `unallocated`; no rule configured is also explicitly `unallocated`.
 - Canonical source amount and three-letter currency are required before calculating an allocation. Missing canonical values create an `unknown` snapshot. Legacy integer amounts are not converted or interpreted as minor/major units.
 - A configured rule currency, when supplied, must match the source currency. Currency conversion is not performed.

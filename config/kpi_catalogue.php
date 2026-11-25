@@ -1,6 +1,5 @@
 <?php
 
-use App\Models\CompetitorOfferObservation;
 use App\Models\Customer;
 use App\Models\CustomerLead;
 use App\Models\Task;
@@ -56,15 +55,6 @@ return [
             'date_basis' => 'local_date_as_of', 'permission' => 'task.index', 'missing_data' => 'unavailable_not_zero',
             'formula' => "COUNT(tasks.id) WHERE status != 'done' AND due_date < reporting_local_date AND visible_to_viewer",
             'description' => 'Count visible tasks whose status is not exactly done and whose due date is strictly before the reporting date. Tasks due today are not overdue.',
-        ],
-        [
-            'key' => 'competitor_offer_snapshot_count', 'label' => 'Recorded competitor offer snapshots', 'domain' => 'market_intelligence',
-            'calculation_type' => 'competitor_offer_snapshot_count', 'calculation_service' => KpiAggregationService::class,
-            'source_service' => CompetitorOfferObservation::class, 'source' => 'competitor_offer_observations', 'unit' => 'snapshots', 'dimensions' => [],
-            'supported_period' => ['kind' => 'as_of', 'granularity' => 'day', 'historical' => false],
-            'date_basis' => 'as_of', 'permission' => 'competitor_offer.index', 'missing_data' => 'unavailable_not_zero',
-            'formula' => 'COUNT(competitor_offer_observations.id), including append-only history for later soft-deleted offers',
-            'description' => 'Count append-only competitor offer observations, including historical snapshots for offers later soft-deleted. This is inventory coverage, not market share or source accuracy.',
         ],
     ],
 ];

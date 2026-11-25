@@ -1,5 +1,7 @@
 # Market intelligence requirements and readiness audit
 
+> **Scope update (2026-11-25):** Competitor, competitor-offer, and offer-observation ownership has been retired from `os.edventure.ro` under issue #578. These sections are historical audit/requirements context, not active application functionality. The active Market Analysis surface retains Google Ads metrics and Market Trends only.
+
 ## Scope
 
 This audit records the market-intelligence structures and observable dashboard behavior in the repository. It is a technical inventory, not an approved business requirements document, source-provider approval, or market-data validation.
@@ -11,7 +13,7 @@ This audit records the market-intelligence structures and observable dashboard b
 | Competitor profiles | `Competitor` stores name, site, social profile fields, and a JSON `locations` field. | No verified source provenance, geographic normalization, or periodic profile snapshots. A populated URL field does not establish that the profile is current. |
 | Competitor offers | `CompetitorOffer` stores current working data plus source URL, currency, price basis, validity window, and observation time. Material changes append `CompetitorOfferObservation` snapshots with separate observed/recorded timestamps and source-presence status. | Legacy values remain unknown until verified; migration does not fabricate historical snapshots. A source URL is provenance metadata, not proof of accuracy. Currency and price basis must be known before comparisons.
 | Market trends | `MarketTrend` observations are permission-gated and displayed on the market analysis dashboard with source, period, observation time, value/unit, market/segment, confidence, and status. | The application displays recorded observations; it does not independently verify source accuracy or harmonize incompatible units, segments, or definitions. Source-specific validation and freshness targets still require evidence.
-| Dashboard | `MarketAnalysisDashboardData` reports competitor inventory, offer freshness and observation history, market-trend observations, and imported Google Ads daily metrics. Google Ads aggregates remain separated by currency and are gated by `paid_campaign.index`. | No market-share, demand forecast, or opportunity score is inferred from these records. Dashboard rendering does not call external providers live.
+| Dashboard | `MarketAnalysisDashboardData` reports competitor inventory, offer freshness and observation history, market-trend observations, and imported Google Ads daily metrics. Google Ads aggregates remain separated by currency and are gated by `google_ads_metrics.view`. | No market-share, demand forecast, or opportunity score is inferred from these records. Dashboard rendering does not call external providers live.
 | Advertising | `market:import-google-ads` imports paginated daily campaign metrics through OAuth and GAQL, validates the full result before transactional upsert, and supports dry-run and bounded re-imports. The dashboard displays stored imports. | Live credentials, Cloud-project access level, account authorization, and reconciliation to the Google Ads UI must be verified in deployment. Provider conversions are not unique customer acquisitions or revenue.
 
 ## Requirements decisions needed before integration

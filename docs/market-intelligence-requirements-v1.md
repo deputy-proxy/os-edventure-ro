@@ -1,5 +1,7 @@
 # Market intelligence objectives and data requirements v1
 
+> **Scope update (2026-11-25):** Competitor, competitor-offer, and offer-observation ownership has been retired from `os.edventure.ro` under issue #578. These sections are historical audit/requirements context, not active application functionality. The active Market Analysis surface retains Google Ads metrics and Market Trends only.
+
 **Status:** Engineering requirements proposal; business-owner approval is pending  
 **Roadmap:** [Issue #359](https://github.com/deputy-proxy/os-edventure-ro/issues/359)
 

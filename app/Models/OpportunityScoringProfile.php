@@ -7,7 +7,7 @@ use InvalidArgumentException;
 
 class OpportunityScoringProfile extends Model
 {
-    public const SOURCES = ['market_trend', 'competitor_offer_match'];
+    public const SOURCES = ['market_trend'];
 
     protected $fillable = ['name', 'version', 'status', 'is_provisional', 'description', 'factors'];
 
@@ -64,16 +64,11 @@ class OpportunityScoringProfile extends Model
                 if ((float) $factor['minimum_value'] >= (float) $factor['maximum_value']) {
                     throw new InvalidArgumentException('Factor minimum scoring value must be lower than its maximum.');
                 }
-                if ($factor['source'] === 'market_trend') {
-                    if (! preg_match('/^[a-z][a-z0-9_]{0,99}$/', (string) ($factor['metric_key'] ?? ''))) {
-                        throw new InvalidArgumentException('Market-trend factors require a valid metric key.');
-                    }
-                    if (trim((string) ($factor['market'] ?? '')) === '') {
-                        throw new InvalidArgumentException('Market-trend factors require an explicit market scope.');
-                    }
+                if (! preg_match('/^[a-z][a-z0-9_]{0,99}$/', (string) ($factor['metric_key'] ?? ''))) {
+                    throw new InvalidArgumentException('Market-trend factors require a valid metric key.');
                 }
-                if ($factor['source'] === 'competitor_offer_match' && ! isset($factor['max_age_days'])) {
-                    throw new InvalidArgumentException('Competitor-offer factors require an explicit maximum evidence age.');
+                if (trim((string) ($factor['market'] ?? '')) === '') {
+                    throw new InvalidArgumentException('Market-trend factors require an explicit market scope.');
                 }
                 if (isset($factor['max_age_days']) && (filter_var($factor['max_age_days'], FILTER_VALIDATE_INT) === false || (int) $factor['max_age_days'] < 1 || (int) $factor['max_age_days'] > 3650)) {
                     throw new InvalidArgumentException('Factor maximum age must be between 1 and 3650 days.');

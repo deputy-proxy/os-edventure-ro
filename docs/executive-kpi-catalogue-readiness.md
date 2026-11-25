@@ -17,7 +17,7 @@ This is an evidence-based inventory of metrics already exposed by overview servi
 | `GeneralOverviewData::weeklySchedule` | Sessions whose start time falls in the current calendar week. | Unified session source; status is not used to exclude records because lifecycle semantics are inconsistent. This is a schedule, not an attendance/performance KPI. |
 | `FinancialOverviewData::summary` | Transaction totals/counts by account currency and transaction type for current and previous months; customer/vendor invoice status counts. | Transactions are not combined across currencies or with invoice/product amounts. Invoice status counts are not revenue or cash collected. |
 | `TasksAndProjectsData` | Task counts/statuses, overdue/upcoming work, assignee open/overdue counts, project/phase date-window counts, schedule-date comparisons. | Task counts are permission-scoped. Workload is a count, not capacity/utilization. Project status is free text; date variance is a review signal, not a composite risk score. |
-| `MarketAnalysisDashboardData` | Competitor/offer inventory, free-text buckets, freshness, and qualitative comparisons. | No market-share, audience-demand, trend, or opportunity score is calculated. Offer price has no currency field. |
+| `MarketAnalysisDashboardData` | Imported Google Ads daily metrics and stored Market Trends observations. | Google Ads totals remain separated by currency; Market Trends retains source/freshness/verification metadata. Competitor and offer inventory has been retired. |
 
 ## Required catalogue contract
 

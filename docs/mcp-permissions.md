@@ -220,9 +220,9 @@ The fourteen #539 tools are read-only and use dedicated scopes. HR/payroll and a
 | `get_product_catalogue` | `mcp.products.catalogue.read` | `product.index` |
 | `get_product_cost_summary` | `mcp.products.costs.read` | `product_cost.index` |
 | `get_product_profitability` | `mcp.products.profitability.read` | `product.index`, `finance-profitability.view` |
-| `get_campaign_performance` | `mcp.marketing.campaign-performance.read` | `paid_campaign.index` |
-| `get_google_ads_import_status` | `mcp.marketing.google-ads-imports.read` | `paid_campaign.index` |
-| `get_market_observations` | `mcp.marketing.market-observations.read` | `competitor_offer.index`, `market_trend.index` |
+| `get_campaign_performance` | `mcp.marketing.campaign-performance.read` | `google_ads_metrics.view` |
+| `get_google_ads_import_status` | `mcp.marketing.google-ads-imports.read` | `google_ads_metrics.view` |
+| `get_market_observations` | `mcp.marketing.market-observations.read` | `market_trend.index` |
 | `get_academic_overview` | `mcp.academic.overview.read` | `student.index`, `group.index`, `session.index` |
 | `get_attendance_summary` | `mcp.academic.attendance.read` | `session_attendance.index`, `session.index` |
 | `get_group_operations` | `mcp.academic.groups.read` | `group.index`, `session.index` |

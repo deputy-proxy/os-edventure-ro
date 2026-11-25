@@ -1,5 +1,7 @@
 # Financial budget entry and versioning: current-state audit v1
 
+> **Historical scope note (2026-11-25):** These audits predate issue #578. The PaidCampaign model/table and its `budget` field have since been retired from the active application. References below describe the state inspected when this audit was written, not a current model or supported input.
+
 **Status:** Engineering scope audit; financial budget contract not yet implemented  
 **Date:** 2026-10-27  
 **Roadmap:** [Issue #356](https://github.com/deputy-proxy/os-edventure-ro/issues/356)
