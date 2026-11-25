@@ -46,6 +46,27 @@ class PanelAccessAuthorizationTest extends TestCase
         $this->assertTrue($user->fresh()->canAccessPanel(Filament::getPanel('admin')));
     }
 
+    public function test_development_assistant_with_its_existing_permission_set_retains_panel_access(): void
+    {
+        $permissions = collect(range(1, 309))
+            ->map(fn (int $number): string => 'development.permission_'.$number)
+            ->all();
+        $role = $this->createRole(['Development' => $permissions]);
+        $role->update(['name' => 'Assistant']);
+        $user = User::factory()->create([
+            'name' => 'AI Assistant',
+            'email' => 'chatgpt@edventure.ro',
+        ]);
+        $user->roles()->attach($role->getKey());
+
+        $this->assertCount(309, collect($role->fresh()->access)->flatten()->filter());
+        $this->assertTrue($user->fresh()->canAccessPanel(Filament::getPanel('admin')));
+
+        $this->actingAs($user)
+            ->get('/admin')
+            ->assertSuccessful();
+    }
+
     public function test_authenticated_user_without_a_role_is_denied_from_admin_routes(): void
     {
         $user = User::factory()->create();
