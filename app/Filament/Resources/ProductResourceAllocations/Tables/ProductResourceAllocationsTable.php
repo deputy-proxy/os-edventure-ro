@@ -22,7 +22,6 @@ class ProductResourceAllocationsTable
                     ->formatStateUsing(fn (?string $state): string => match ($state) {
                         'product' => 'Product',
                         'project' => 'Project',
-                        'paid_campaign' => 'Paid campaign',
                         default => 'Unknown',
                     }),
                 Tables\Columns\TextColumn::make('targetable.title')

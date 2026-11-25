@@ -8,7 +8,6 @@ use App\Models\Course;
 use App\Models\Customer;
 use App\Models\CustomerLead;
 use App\Models\Event;
-use App\Models\NewsletterSubscriber;
 use App\Models\ProductReview;
 use App\Models\Workshop;
 use App\Services\PublicSubmissions\CompetitionEntrySubmission;
@@ -110,40 +109,6 @@ class PublicSubmissionController extends Controller
         }
 
         return back()->with('status', __('Your entry has been submitted for review.'));
-    }
-
-    public function newsletterForm(): View
-    {
-        return view('public-forms.newsletter');
-    }
-
-    public function subscribeNewsletter(Request $request): RedirectResponse
-    {
-        $data = $request->validate([
-            'first_name' => ['required', 'string', 'max:100'],
-            'last_name' => ['required', 'string', 'max:100'],
-            'email' => ['required', 'email:rfc', 'max:255'],
-            'privacy_consent' => ['accepted'],
-            'website' => ['prohibited'],
-        ]);
-
-        $existing = NewsletterSubscriber::query()->where('email', $data['email'])->exists();
-        if (! $existing) {
-            try {
-                NewsletterSubscriber::query()->create([
-                    'first_name' => $data['first_name'],
-                    'last_name' => $data['last_name'],
-                    'email' => $data['email'],
-                    'privacy_consented_at' => now(),
-                ]);
-            } catch (QueryException $exception) {
-                if (! $this->isPublicEmailUniqueViolation($exception, 'newsletter_subscribers_active_email_unique', 'newsletter_subscribers')) {
-                    throw $exception;
-                }
-            }
-        }
-
-        return back()->with('status', __('Thank you. Your subscription request has been received.'));
     }
 
     public function reviewForm(): View

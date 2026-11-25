@@ -34,8 +34,6 @@ There are 78 resource edit pages at the time of this audit. The remaining migrat
 - [ ] Camps
 - [ ] CompetitionEntries
 - [ ] Competitions
-- [ ] CompetitorOffers
-- [ ] Competitors
 - [ ] CourseMaterials
 - [ ] Courses
 - [ ] CustomerContracts
@@ -64,12 +62,7 @@ There are 78 resource edit pages at the time of this audit. The remaining migrat
 - [ ] LegalDocuments
 - [ ] MeetingTopics
 - [ ] Meetings
-- [ ] NewsletterSubscribers
-- [ ] Newsletters
-- [ ] PaidCampaigns
-- [ ] Partners
 - [ ] PhysicalAssets
-- [ ] PotentialPartners
 - [ ] Processes
 - [ ] ProductCosts
 - [ ] ProductPrices
@@ -84,7 +77,6 @@ There are 78 resource edit pages at the time of this audit. The remaining migrat
 - [ ] QuarterlyObjectives
 - [ ] SessionAssistances
 - [ ] SessionAttendances
-- [ ] SocialPosts
 - [ ] Students
 - [ ] Tasks
 - [ ] Taxes

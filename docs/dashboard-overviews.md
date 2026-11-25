@@ -33,7 +33,7 @@ The admin landing page uses `App\Services\AdminOverviewDashboardData` for the sy
 - Customer totals count non-soft-deleted customers. Open leads are non-soft-deleted lead records whose stored status is neither `converted` nor `lost`.
 - Project totals count non-soft-deleted projects. Project status is free text, so the landing page does not infer an active-project count.
 - Open tasks are non-soft-deleted tasks whose status is not exactly `done`. Unless `task.view_all` is granted, counts and overdue items are scoped to tasks assigned to or created by the current user, matching the task resource's visibility rule.
-- Article, newsletter, and paid-campaign records are kept as separate totals because their lifecycle statuses are not equivalent. Each metric is shown only when the viewer has the corresponding resource list permission.
+- Only Article records remain in the content inventory summary. Retired marketing/partner model subject identifiers may remain in historical activity records, but are not queried as active resources.
 - Overdue tasks use `due_date` strictly before the current date in `config('app.timezone')`; completed tasks are excluded. The list is capped at eight rows.
 - Recent activity displays only the description, event metadata, subject type, and timestamp for activity entries whose subject type corresponds to a resource the viewer may list. Changed attributes and properties are not selected. Activity is omitted when the viewer has no supported resource list permissions.
 - Domain overview links continue to require the destination page's own `canAccess()` check. Resource links are emitted only when the matching resource list permission is granted.
@@ -65,27 +65,19 @@ This landing page intentionally omits revenue, performance, attendance, teacher 
 
 ## Marketing Content Management overview (#239)
 
-`App\Services\ContentManagementDashboardData` supplies the existing `ContentManagement` page. Primary inventory types are articles, newsletters, social posts, and paid campaigns. Product reviews and competition entries appear in a separate moderation queue because they are public submissions, not editorial inventory.
+`App\Services\ContentManagementDashboardData` supplies the existing `ContentManagement` page. The active content inventory is Articles only. Product reviews and competition entries remain in a separate moderation queue because they are public submissions, not editorial inventory.
 
-- Each content type has its own current-record count, soft-deleted count, and raw status distribution. Status buckets are grouped by exact stored value and only count non-deleted records. Status strings are free text, so no shared draft/scheduled/published/failed lifecycle is inferred across types.
-- Upcoming lists use the type-specific date field: `scheduled_on` for articles, newsletters, and social posts; `scheduled_to_start_on` for paid campaigns. The date-only window is today through 29 days after today inclusive (30 calendar dates), based on `config('app.timezone')`. The stored status is displayed unchanged; a future date alone does not mean a record is queued for publication.
-- Recent publication lists are available only for current articles and social posts with status exactly `published` and `published_on` within the past 30 calendar dates, including today. Newsletter `delivered_on` and paid-campaign start/end dates are not treated as publication events because those types do not have a controlled, consistent publication status.
-- The review queue counts only current product reviews and competition entries whose status is exactly `pending_review`. The two queues remain separate. Each count and link requires the matching resource list permission.
-- The content-management page gate does not grant access to content records. Each inventory/status query and list link requires its resource's `*.index` permission; create links additionally require the matching `*.create` permission. Without list permission, the dashboard shows an unavailable state rather than a zero count.
-- Reach, clicks, opens, reactions, and engagement rates are not stored in these content schemas and are intentionally not estimated.
+- Article inventory reports current and soft-deleted counts, raw stored status values, upcoming records by `scheduled_on`, and recent publications with status exactly `published`.
+- Article counts and quick links require `article.index`; create links additionally require `article.create`. The `content-management.view` page gate does not grant access to article records.
+- Newsletter, social-post and paid-campaign records are no longer part of this application. The external Mailchimp footer signup remains separate from local persistence.
 
-## Marketing Market Analysis overview (#240)
+## Market Analysis overview
 
-`App\Services\MarketAnalysisDashboardData` supplies the existing `MarketAnalysis` page. The available market-intelligence entities are competitor profiles and competitor-offer records; no separate market report, historical observation, segment, or audience/demand model exists.
+The active Market Analysis page retains two independent data sources: imported Google Ads daily metrics and stored Market Trends observations. Google Ads requires `google_ads_metrics.view`; Market Trends requires `market_trend.index`. The `market-analysis.view` page gate does not grant either source permission.
 
-- Competitor and offer inventories count current records separately from soft-deleted records. Competitor profile coverage counts non-empty website/social fields and whether the JSON locations array has entries; these are completeness counts, not URL validation or verified geographic coverage.
-- Offer status and offer-type distributions group exact stored values. Both fields are free text, so the dashboard does not normalize them into lifecycle or strategy categories.
-- Offer freshness uses the explicit `last_check` date: dates from today minus 29 days through today are recent; earlier dates are stale; dates after today are flagged as future-dated. Recent-check lists use the same 30-calendar-day window. `updated_at` is shown only as a record-edit timestamp, not source verification.
-- Offers linked to missing or soft-deleted competitors are flagged only when both `competitor_offer.index` and `competitor.index` are granted. Per-competitor offer counts likewise require both list permissions.
-- `our_similar_offer` and `their_differentiator` are presented as manually entered qualitative notes. The dashboard does not infer or score strategic opportunities/risks from counts or notes.
-- `offer_price` has no currency field, and competitor offers have no offer-level source URL. Prices are not averaged/compared and the competitor website field is not treated as proof of offer verification.
-- No time-series chart, market share/size, audience segment, demand, or engagement metric is produced because there is no dated observation history or supporting data model. The latest `last_check` value alone is not a historical trend.
-- Competitor metrics/links require `competitor.index`; offer metrics/links require `competitor_offer.index`; per-competitor views require both. Create links additionally require the matching create permission. The `market-analysis.view` page gate does not grant access to either resource.
+- Google Ads aggregates preserve the provider-reported currency and `cost_micros` unit; totals are never combined across currencies. `google_ads_metrics.view` is independent of the retired PaidCampaign resource.
+- Market Trends displays stored source, period, unit, freshness, verification and missing-data metadata. Missing/stale observations are not imputed as zero.
+- Competitor, competitor-offer and observation-history panels are retired. They are not active dashboard sources or opportunity-analysis evidence.
 
 ## Executive KPI catalogue readiness
 

@@ -47,3 +47,6 @@ The application rejects categories outside the controlled vocabulary. Legacy sou
 ## Limitations
 
 This policy is version `v1` and is an operational taxonomy, not a claim of complete advertising attribution. It does not establish customer-level first-touch/last-touch/multi-touch credit, cross-device identity resolution, campaign cost allocation, or Google Ads synchronization. Lead-level first/last snapshots are audit evidence only. Customer-level credit and production taxonomy approval require separate contracts and tests.
+
+
+The `partner` source category and `referral_partner` value are CRM attribution taxonomy/free text. They are not foreign-key relationships to the retired Partner or PotentialPartner models and remain part of the CRM attribution contract.

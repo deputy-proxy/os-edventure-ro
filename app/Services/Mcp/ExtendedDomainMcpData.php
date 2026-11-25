@@ -2,7 +2,6 @@
 
 namespace App\Services\Mcp;
 
-use App\Models\CompetitorOfferObservation;
 use App\Models\Employee;
 use App\Models\EmployeeEvaluation;
 use App\Models\EmployeePaySlip;
@@ -16,7 +15,6 @@ use App\Models\ProductCost;
 use App\Models\ProfitabilityCalculationRun;
 use App\Models\Session;
 use App\Models\SessionAttendance;
-use App\Services\ContentManagementDashboardData;
 use App\Services\MarketAnalysisDashboardData;
 use App\Services\ProductsOverviewData;
 use App\Services\ProfitabilityReportService;
@@ -240,20 +238,13 @@ final class ExtendedDomainMcpData
 
     public function campaignPerformance(): array
     {
-        $permissions = ['competitor_offer.index' => false, 'competitor.index' => false, 'market_trend.index' => false, 'google_ads_metrics.view' => true, 'paid_campaign.index' => true];
-        $contentPermissions = ['paid_campaign.index' => true];
-        $market = app(MarketAnalysisDashboardData::class)->summary($permissions, CarbonImmutable::now(self::TZ));
-        $content = app(ContentManagementDashboardData::class)->summary($contentPermissions, CarbonImmutable::now(self::TZ));
-        $campaigns = $content['content_types']['paid_campaigns'];
+        $market = app(MarketAnalysisDashboardData::class)->summary([
+            'google_ads_metrics.view' => true,
+            'market_trend.index' => false,
+        ], CarbonImmutable::now(self::TZ));
 
         return [
             'as_of' => CarbonImmutable::now(self::TZ)->toIso8601String(),
-            'paid_campaigns' => [
-                'current_count' => $campaigns['current_count'],
-                'status_buckets' => $campaigns['status_buckets'],
-                'upcoming_count' => $campaigns['upcoming_count'],
-                'recent_published_count' => $campaigns['recent_published_count'],
-            ],
             'google_ads' => [
                 'from' => $market['google_ads']['from'],
                 'to' => $market['google_ads']['to'],
@@ -307,8 +298,6 @@ final class ExtendedDomainMcpData
         $trends = MarketTrend::query()->where('status', 'active')
             ->orderByDesc('observed_at')->limit(50)
             ->toBase()->get(['name', 'category', 'metric_key', 'value', 'unit', 'market', 'segment', 'period_start', 'period_end', 'source_name', 'source_url', 'observed_at', 'change_pct', 'confidence', 'data_status', 'source_type', 'freshness_status', 'verification_status', 'source_reference', 'source_revision', 'missing_reason', 'methodology']);
-        $offers = CompetitorOfferObservation::query()->orderByDesc('observed_at')->limit(50)
-            ->toBase()->get(['title', 'offer_type', 'offer_price', 'currency', 'price_basis', 'source_url', 'valid_from', 'valid_until', 'observed_at', 'source_status']);
 
         return [
             'as_of' => $now->toIso8601String(),
@@ -335,18 +324,6 @@ final class ExtendedDomainMcpData
                 'source_revision' => $trend->source_revision,
                 'missing_reason' => $trend->missing_reason,
                 'methodology' => $trend->methodology,
-            ])->all(),
-            'competitor_observations' => $offers->map(fn ($offer): array => [
-                'title' => $offer->title,
-                'offer_type' => $offer->offer_type,
-                'offer_price' => $offer->offer_price,
-                'currency' => $offer->currency,
-                'price_basis' => $offer->price_basis,
-                'source_url' => $offer->source_url,
-                'valid_from' => filled($offer->valid_from) ? CarbonImmutable::parse($offer->valid_from)->toDateString() : null,
-                'valid_until' => filled($offer->valid_until) ? CarbonImmutable::parse($offer->valid_until)->toDateString() : null,
-                'observed_at' => CarbonImmutable::parse($offer->observed_at)->toIso8601String(),
-                'source_status' => $offer->source_status,
             ])->all(),
             'market_trends_source_note' => 'Stored observations only; no ingestion or live market source is invoked by MCP',
         ];

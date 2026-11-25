@@ -2,7 +2,6 @@
 
 namespace App\Services;
 
-use App\Models\CompetitorOfferObservation;
 use App\Models\Customer;
 use App\Models\CustomerLead;
 use App\Models\KpiDefinition;
@@ -19,10 +18,10 @@ class KpiAggregationService
         'unknown_lead_source_count',
         'open_task_count',
         'overdue_task_count',
-        'competitor_offer_snapshot_count',
     ];
 
     public const MAX_PROVENANCE_RECORDS = 100;
+
     public const MAX_DIMENSION_GROUPS = 50;
 
     public function __construct(private readonly KpiCatalogueRegistry $catalogue) {}
@@ -31,7 +30,7 @@ class KpiAggregationService
      * Evaluate the allow-listed catalogue. An active, effective-dated database
      * definition overrides its static v1 definition without changing the key.
      *
-     * @param array<string, bool> $permissions
+     * @param  array<string, bool>  $permissions
      * @return array<string, mixed>
      */
     public function current(array $permissions = [], ?CarbonImmutable $asOf = null): array
@@ -125,7 +124,7 @@ class KpiAggregationService
     }
 
     /** @param array<string, mixed> $definition
-     * @param array<string, bool> $permissions
+     * @param  array<string, bool>  $permissions
      * @return array<string, mixed>
      */
     private function aggregateStatic(string $key, array $definition, array $permissions, CarbonImmutable $asOf, string $date): array
@@ -164,9 +163,9 @@ class KpiAggregationService
      * Execute only registered query contracts. Counts are exact; source IDs and
      * grouped dimensions are deliberately capped to keep provenance bounded.
      *
-     * @param array<string, bool> $permissions
-     * @param array<int, array{field: string, operator: string, value: string|array<int, string>}> $filters
-     * @param array<int, string> $dimensions
+     * @param  array<string, bool>  $permissions
+     * @param  array<int, array{field: string, operator: string, value: string|array<int, string>}>  $filters
+     * @param  array<int, string>  $dimensions
      * @return array<string, mixed>
      */
     private function evaluate(string $type, array $permissions, string $date, array $filters = [], array $dimensions = []): array
@@ -214,7 +213,6 @@ class KpiAggregationService
             'unconverted_lead_count' => CustomerLead::query()->whereNull('converted_customer_id'),
             'unknown_lead_source_count' => CustomerLead::query()->where('source_category', 'unknown'),
             'open_task_count', 'overdue_task_count' => $this->taskQuery($permissions),
-            'competitor_offer_snapshot_count' => CompetitorOfferObservation::query(),
             default => null,
         };
     }
@@ -242,7 +240,7 @@ class KpiAggregationService
      * again at execution time so stale or tampered configuration cannot widen
      * the query surface.
      *
-     * @param array<int, array{field: string, operator: string, value: string|array<int, string>}> $filters
+     * @param  array<int, array{field: string, operator: string, value: string|array<int, string>}>  $filters
      */
     private function applyLeadFilters(Builder $query, array $filters): Builder
     {
@@ -265,7 +263,7 @@ class KpiAggregationService
     }
 
     /**
-     * @param array<int, string> $dimensions
+     * @param  array<int, string>  $dimensions
      * @return array<string, int>
      */
     private function dimensionBreakdown(Builder $query, array $dimensions): array
@@ -313,9 +311,9 @@ class KpiAggregationService
     }
 
     /**
-     * @param array<string, mixed>|null $contract
-     * @param array<string, int> $breakdown
-     * @param array<string, mixed> $evaluation
+     * @param  array<string, mixed>|null  $contract
+     * @param  array<string, int>  $breakdown
+     * @param  array<string, mixed>  $evaluation
      * @return array<string, mixed>
      */
     private function result(

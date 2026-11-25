@@ -23,14 +23,11 @@ final class ExecutiveMcpCapabilityRegistrar extends AuthorizedMcpCapabilityRegis
         'employee.index',
         'customer.index',
         'customer_lead.index',
-        'competitor_offer.index',
         'project.index',
         'project_phase.index',
         'task.index',
         'task.view_all',
         'article.index',
-        'newsletter.index',
-        'paid_campaign.index',
     ];
 
     public function register(Builder $builder): void

@@ -9,8 +9,8 @@ All overview, KPI, business-health, priorities, and period-comparison calls requ
 The executive tools also declare optional domain permissions. These permissions are allow-listed for the dedicated Assistant role but are not required to invoke the tool. Each source is included only when the AI principal currently has that exact domain permission:
 
 - `student.index`, `employee.index`, `customer.index`, `customer_lead.index`
-- `competitor_offer.index`, `project.index`, `project_phase.index`, `task.index`, `task.view_all`
-- `article.index`, `newsletter.index`, `paid_campaign.index`
+- `project.index`, `project_phase.index`, `task.index`, `task.view_all`
+- `article.index`
 
 This is deliberate: an overview permission does not grant access to the underlying resource. Task queries retain the existing assigned-to/created-by scope unless `task.view_all` is explicitly granted. Counts and aggregates are calculated only from the visible source records.
 

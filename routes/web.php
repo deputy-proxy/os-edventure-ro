@@ -19,8 +19,6 @@ Route::prefix('public')->name('public.')->middleware('throttle:5,1')->group(func
     Route::post('/enquiries', [PublicSubmissionController::class, 'submitLead'])->name('leads.store');
     Route::get('/competitions/{competition}/entries/create', [PublicSubmissionController::class, 'competitionForm'])->name('competitions.entries.create');
     Route::post('/competitions/{competition}/entries', [PublicSubmissionController::class, 'submitCompetitionEntry'])->name('competitions.entries.store');
-    Route::get('/newsletter/subscribe', [PublicSubmissionController::class, 'newsletterForm'])->name('newsletter.create');
-    Route::post('/newsletter/subscribe', [PublicSubmissionController::class, 'subscribeNewsletter'])->name('newsletter.store');
     Route::get('/reviews/create', [PublicSubmissionController::class, 'reviewForm'])->name('reviews.create');
     Route::post('/reviews', [PublicSubmissionController::class, 'submitReview'])->name('reviews.store');
 });

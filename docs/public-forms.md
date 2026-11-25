@@ -6,7 +6,6 @@ Public forms are dedicated web views and controllers, separate from Filament. Th
 | --- | --- | --- | --- |
 | CustomerLead | `/public/enquiries` | Prospective customers submit contact details and interests; new leads enter the review/follow-up pipeline with status `new`. | Customer management |
 | CompetitionEntry | `/public/competitions/{competition}/entries/create` | Entrants submit a title and entry content to an active, non-expired competition; entries remain internal for review. | Competition management |
-| NewsletterSubscriber | `/public/newsletter/subscribe` | Visitors request newsletter subscription; duplicate email submissions are idempotent. | Marketing |
 | ProductReview | `/public/reviews/create` | Existing customers submit a review for a supported course, camp, workshop, or event. Customer association is derived from the email on an existing customer record; reviews await internal moderation. | Product management |
 
 ## Security and behavior
@@ -16,4 +15,7 @@ Public forms are dedicated web views and controllers, separate from Filament. Th
 - Competition IDs come from the route, and future/expired competitions and competitions at their configured entry limit reject submissions. Attachments are optional for public submissions.
 - Product review type is allowlisted; the referenced record must exist, rating is 1–5, and customer association comes from the existing customer record rather than submitted IDs.
 - Requests are limited to five per minute per IP and include a honeypot field. Public file uploads are not accepted.
-- Consent timestamps are persisted on each submitted record. Newsletter submissions do not attach an arbitrary customer ID; review submissions require the submitted email to match an existing customer record.
+- Consent timestamps are persisted on each submitted record. The internal newsletter subscriber endpoint and persistence model have been retired. The existing footer signup is a separate Mailchimp form and remains unchanged; it does not write to the local subscriber table.
+
+
+The Mailchimp footer embed is intentionally retained as an external signup channel. Do not replace or remove it as part of the local newsletter-domain retirement without an approved cr8or-owned destination.

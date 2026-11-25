@@ -20,6 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       APP_ENV: testing
+      DOMAIN_RETIREMENT_DATA_SIGNOFF: 'true'
       DB_CONNECTION: sqlite
       DB_DATABASE: ${{ github.workspace }}/database/ci.sqlite
       CACHE_STORE: array
@@ -178,6 +179,7 @@ jobs:
           --health-retries=10
     env:
       APP_ENV: testing
+      DOMAIN_RETIREMENT_DATA_SIGNOFF: 'true'
       DB_CONNECTION: mysql
       DB_HOST: 127.0.0.1
       DB_PORT: 3306
@@ -255,13 +257,16 @@ jobs:
           tests/Feature/McpOperationsToolsTest.php
           tests/Feature/McpProcessToolsTest.php
           tests/Feature/MarketTrendTest.php
-          tests/Feature/CompetitorOfferObservationTest.php
+          tests/Feature/DomainRetirementMigrationTest.php
+          tests/Feature/ContentManagementDashboardDataTest.php
+          tests/Feature/ProductOpportunityAnalysisServiceTest.php
+          tests/Feature/MarketAdvertisingAnalyticsWorkflowTest.php
+          tests/Feature/McpExtendedDomainToolsTest.php
           tests/Feature/GoogleAdsCampaignMetricsImporterTest.php
           tests/Feature/GoogleAdsRefreshRecoveryTest.php
           tests/Feature/GoogleAdsImportConfigurationTest.php
           tests/Feature/MarketIntelligenceConfigurationTest.php
           tests/Feature/MarketDataImportAdaptersTest.php
-          tests/Feature/MarketAnalysisDashboardDataTest.php
           tests/Feature/McpApprovalWorkflowTest.php
           tests/Feature/McpAuthorizationTest.php
           tests/Feature/ExecutiveKpiCatalogueTest.php

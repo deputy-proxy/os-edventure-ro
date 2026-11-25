@@ -2,7 +2,6 @@
 
 namespace Tests\Feature;
 
-use App\Models\PaidCampaign;
 use App\Models\Product;
 use App\Models\ProductCost;
 use App\Models\ProductCostAllocationSnapshot;
@@ -50,7 +49,6 @@ class ProductCostAllocationHistoryTest extends TestCase
         $type = match (true) {
             $target instanceof Product => 'product',
             $target instanceof Project => 'project',
-            $target instanceof PaidCampaign => 'paid_campaign',
             default => 'unsupported',
         };
 
@@ -69,11 +67,9 @@ class ProductCostAllocationHistoryTest extends TestCase
         $resource = $this->resource();
         $product = $this->product();
         $project = Project::factory()->create();
-        $campaign = PaidCampaign::factory()->create();
 
         $this->allocation($resource, $product, 30, 'RON');
         $this->allocation($resource, $project, 30);
-        $this->allocation($resource, $campaign, 30);
 
         $service = app(ProductCostService::class);
         $service->recalculateForResource($resource);
@@ -83,12 +79,11 @@ class ProductCostAllocationHistoryTest extends TestCase
             ->where('version', 1)
             ->get();
 
-        $this->assertCount(4, $firstRun);
-        $this->assertSame(3, $firstRun->where('status', ProductCostAllocationSnapshot::STATUS_ALLOCATED)->count());
-        $this->assertSame('10.00', $firstRun->where('status', ProductCostAllocationSnapshot::STATUS_UNALLOCATED)->first()->allocated_amount_decimal);
-        $this->assertSame(90, $resource->fresh()->allocated_percentage);
+        $this->assertCount(3, $firstRun);
+        $this->assertSame(2, $firstRun->where('status', ProductCostAllocationSnapshot::STATUS_ALLOCATED)->count());
+        $this->assertSame('40.00', $firstRun->where('status', ProductCostAllocationSnapshot::STATUS_UNALLOCATED)->first()->allocated_amount_decimal);
+        $this->assertSame(60, $resource->fresh()->allocated_percentage);
         $this->assertSame(1, $firstRun->where('targetable_type', 'project')->count());
-        $this->assertSame(1, $firstRun->where('targetable_type', 'paid_campaign')->count());
         $this->assertSame('vendor_invoice', $firstRun->first()->source_type);
         $this->assertSame($resource->resourceable_id, $firstRun->first()->source_snapshot['source_id']);
         $this->assertSame($resource->resourceable_id, $firstRun->first()->source->getKey());
@@ -287,13 +282,13 @@ class ProductCostAllocationHistoryTest extends TestCase
         }
     }
 
-    public function test_unsupported_allocation_target_is_recorded_as_unknown(): void
+    public function test_retired_paid_campaign_allocation_target_is_recorded_as_unknown(): void
     {
         $resource = $this->resource();
         ProductResourceAllocation::withoutEvents(fn () => ProductResourceAllocation::query()->create([
             'product_resource_id' => $resource->getKey(),
-            'targetable_type' => 'vendor_invoice',
-            'targetable_id' => $resource->resourceable_id,
+            'targetable_type' => 'paid_campaign',
+            'targetable_id' => 12,
             'allocation_percent' => 100,
             'month' => '2026-10-01',
         ]));
@@ -305,7 +300,7 @@ class ProductCostAllocationHistoryTest extends TestCase
             ->first();
 
         $this->assertSame(ProductCostAllocationSnapshot::STATUS_UNKNOWN, $snapshot->status);
-        $this->assertSame('vendor_invoice', $snapshot->rule_snapshot['invalid_targets'][0]['target_type']);
+        $this->assertSame('paid_campaign', $snapshot->rule_snapshot['invalid_targets'][0]['target_type']);
     }
 
     public function test_currency_mismatch_and_invalid_percentages_roll_back_the_run(): void

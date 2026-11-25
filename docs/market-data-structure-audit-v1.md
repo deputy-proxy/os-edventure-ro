@@ -1,5 +1,7 @@
 # Market data structure audit v1
 
+> **Scope update (2026-11-25):** Competitor, competitor-offer, and offer-observation ownership has been retired from `os.edventure.ro` under issue #578. These sections are historical audit/requirements context, not active application functionality. The active Market Analysis surface retains Google Ads metrics and Market Trends only.
+
 **Status:** Current-state engineering audit; schema changes are not approved by this document  
 **Roadmap:** [Issue #361](https://github.com/deputy-proxy/os-edventure-ro/issues/361)
 

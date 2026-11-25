@@ -31,7 +31,6 @@ KpiCatalogueRegistry validates records, rejects duplicate keys and invalid dimen
 | unknown_lead_source_count | COUNT(customer_leads.id) WHERE deleted_at IS NULL AND source_category = 'unknown' | CustomerLead / customer_leads.source_category | Records | customer_lead.index | Daily as-of |
 | open_task_count | COUNT(tasks.id) WHERE status != 'done' AND visible_to_viewer | Task / tasks | Records | task.index | Daily as-of |
 | overdue_task_count | COUNT(tasks.id) WHERE status != 'done' AND due_date < reporting_local_date AND visible_to_viewer | Task / tasks.due_date,status | Records | task.index | Daily as-of |
-| competitor_offer_snapshot_count | COUNT(competitor_offer_observations.id) | CompetitorOfferObservation / append-only observations | Snapshots | competitor_offer.index | Daily as-of |
 
 ### Calculation semantics and limitations
 
@@ -40,7 +39,6 @@ KpiCatalogueRegistry validates records, rejects duplicate keys and invalid dimen
 - Unknown lead source is an explicit controlled category; legacy free text is not used to infer attribution.
 - Task counts include tasks whose status is not exactly done. Unless task.view_all is granted, visibility is limited to tasks assigned to or created by the current viewer.
 - A task due on the reporting date is not overdue. The comparison uses the configured reporting timezone.
-- Competitor offer snapshot count includes append-only observations for offers later soft-deleted. It is inventory coverage, not market share or source accuracy.
 - No KPI in v1 supports dimensions, historical reconstruction, arbitrary date ranges, currency conversion, or financial aggregation.
 
 ## Missing and unavailable behavior

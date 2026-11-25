@@ -19,7 +19,7 @@ class OpportunityScoringProfileForm
             Forms\Components\Repeater::make('factors')->schema([
                 Forms\Components\TextInput::make('key')->required()->regex('/^[a-z][a-z0-9_]{0,59}$/')->maxLength(60),
                 Forms\Components\TextInput::make('label')->required()->maxLength(120),
-                Forms\Components\Select::make('source')->options(['market_trend' => 'Market trend observation', 'competitor_offer_match' => 'Exact competitor-offer note match'])->required()->live(),
+                Forms\Components\Select::make('source')->options(['market_trend' => 'Market trend observation'])->required()->live(),
                 Forms\Components\TextInput::make('weight')->numeric()->integer()->minValue(1)->maxValue(1000)->required()->default(1),
                 Forms\Components\Select::make('direction')->options(['higher' => 'Higher values preferred', 'lower' => 'Lower values preferred'])->required()->default('higher'),
                 Forms\Components\TextInput::make('minimum_value')->numeric()->required(),
@@ -27,7 +27,7 @@ class OpportunityScoringProfileForm
                 Forms\Components\TextInput::make('metric_key')->maxLength(100)->visible(fn (Get $get): bool => $get('source') === 'market_trend')->required(fn (Get $get): bool => $get('source') === 'market_trend'),
                 Forms\Components\TextInput::make('market')->required(fn (Get $get): bool => $get('source') === 'market_trend')->maxLength(100)->visible(fn (Get $get): bool => $get('source') === 'market_trend'),
                 Forms\Components\TextInput::make('segment')->maxLength(100)->visible(fn (Get $get): bool => $get('source') === 'market_trend'),
-                Forms\Components\TextInput::make('max_age_days')->numeric()->integer()->minValue(1)->maxValue(3650)->required(fn (Get $get): bool => $get('source') === 'competitor_offer_match')->helperText('Required for competitor offers. Evidence older than this many days is unknown, not zero.'),
+                Forms\Components\TextInput::make('max_age_days')->numeric()->integer()->minValue(1)->maxValue(3650)->nullable()->helperText('Optional maximum age for evidence. Older observations are treated as unknown, not zero.'),
             ])->columns(2)->minItems(1)->defaultItems(1)->columnSpanFull()->addActionLabel('Add scoring factor')
                 ->helperText('Each factor must identify an evidence source, weight, preferred direction, and explicit numeric scoring range. Missing or stale evidence is excluded from the weighted average.'),
         ]);

@@ -17,8 +17,6 @@
 | `CampParticipant` | None (event metadata only) | event-only: attributes excluded by default |
 | `Competition` | `title`, `start_on`, `end_on`, `maximum_entries` | explicit allowlist |
 | `CompetitionEntry` | `competition_id`, `privacy_consented_at`, `status` | explicit allowlist |
-| `Competitor` | `name`, `site`, `instagram`, `facebook`, `linkedin`, `tiktok` | explicit allowlist |
-| `CompetitorOffer` | `title`, `competitor_id`, `offer_type`, `offer_price`, `last_check`, `status` | explicit allowlist |
 | `Course` | `title` | explicit allowlist |
 | `CourseMaterial` | `title`, `course_id`, `added_by` | explicit allowlist |
 | `Customer` | `customer_type` | explicit allowlist |
@@ -41,11 +39,6 @@
 | `Group` | `title`, `course_id`, `teacher_id`, `status`, `initiated_on`, `formed_on`, `started_on`, `ended_on` | explicit allowlist |
 | `JobDescription` | `job_title`, `job_level`, `job_role` | explicit allowlist |
 | `LegalDocument` | `title`, `category`, `expiration_date` | explicit allowlist |
-| `Newsletter` | `title`, `audience`, `scheduled_on`, `delivered_on`, `status` | explicit allowlist |
-| `NewsletterSubscriber` | `privacy_consented_at` | explicit allowlist |
-| `PaidCampaign` | `title`, `network`, `scheduled_to_start_on`, `started_on`, `scheduled_to_end_on`, `ended_on`, `budget`, `status` | explicit allowlist |
-| `Partner` | `name`, `site` | explicit allowlist |
-| `PotentialPartner` | `name`, `site`, `type`, `last_contact` | explicit allowlist |
 | `Process` | `title`, `owner_id`, `main_topic`, `visible_to` | explicit allowlist |
 | `ProductPrice` | `price`, `currency`, `priceable_type`, `priceable_id`, `price_type`, `valid_from`, `valid_until`, `legacy_source_type`, `legacy_source_id` | explicit allowlist |
 | `ProductReview` | `product_type`, `product_id`, `rating`, `reviewed_on`, `privacy_consented_at`, `status` | explicit allowlist |
@@ -56,7 +49,6 @@
 | `Session` | `session_type`, `group_id`, `course_id`, `starts_at`, `ends_at`, `status`, `attendance_status`, `identifier` | explicit allowlist |
 | `SessionAssistance` | `session_id`, `assistance_date`, `status` | explicit allowlist |
 | `SessionAttendance` | `session_id`, `status`, `achievement_badge` | explicit allowlist |
-| `SocialPost` | `title`, `network`, `scheduled_on`, `published_on`, `status` | explicit allowlist |
 | `Student` | None (event metadata only) | event-only: attributes excluded by default |
 | `Task` | `assigned_to`, `project_id`, `project_phase_id`, `status`, `due_date`, `taskable_id`, `taskable_type`, `created_by` | explicit allowlist |
 | `Tax` | `category`, `month`, `amount`, `status`, `due_on`, `paid_on` | explicit allowlist |
@@ -75,6 +67,8 @@
 | `Workshop` | `title`, `start_date`, `end_date`, `start_time`, `end_time`, `type` | explicit allowlist |
 | `WorkshopMaterial` | `title`, `workshop_id`, `added_by` | explicit allowlist |
 | `WorkshopParticipant` | `workshop_id` | explicit allowlist |
+
+The newsletter, paid-campaign, social-post, competitor/offer, and partner domains have been retired from the active application model surface. Their historical `activity_log` rows are intentionally retained as immutable audit history; their old subject type strings may therefore remain in stored history even though no active model or morph-map alias resolves them. The retirement migration does not rewrite or delete those audit records.
 
 ## Request context
 
