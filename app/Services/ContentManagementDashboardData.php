@@ -4,10 +4,7 @@ namespace App\Services;
 
 use App\Models\Article;
 use App\Models\CompetitionEntry;
-use App\Models\Newsletter;
-use App\Models\PaidCampaign;
 use App\Models\ProductReview;
-use App\Models\SocialPost;
 use Carbon\CarbonImmutable;
 
 class ContentManagementDashboardData
@@ -28,21 +25,6 @@ class ContentManagementDashboardData
                 'label' => 'Articles', 'model' => Article::class, 'permission' => 'article.index',
                 'create_permission' => 'article.create', 'schedule_field' => 'scheduled_on',
                 'publication_field' => 'published_on', 'publication_status' => 'published', 'has_status' => true,
-            ],
-            'newsletters' => [
-                'label' => 'Newsletters', 'model' => Newsletter::class, 'permission' => 'newsletter.index',
-                'create_permission' => 'newsletter.create', 'schedule_field' => 'scheduled_on',
-                'publication_field' => null, 'publication_status' => null, 'has_status' => true,
-            ],
-            'social_posts' => [
-                'label' => 'Social posts', 'model' => SocialPost::class, 'permission' => 'social_post.index',
-                'create_permission' => 'social_post.create', 'schedule_field' => 'scheduled_on',
-                'publication_field' => 'published_on', 'publication_status' => 'published', 'has_status' => true,
-            ],
-            'paid_campaigns' => [
-                'label' => 'Paid campaigns', 'model' => PaidCampaign::class, 'permission' => 'paid_campaign.index',
-                'create_permission' => 'paid_campaign.create', 'schedule_field' => 'scheduled_to_start_on',
-                'publication_field' => null, 'publication_status' => null, 'has_status' => true,
             ],
         ];
 
@@ -74,51 +56,45 @@ class ContentManagementDashboardData
             $contentTypes[$key]['current_count'] = $model::query()->count();
             $contentTypes[$key]['soft_deleted_count'] = $model::onlyTrashed()->count();
 
-            {
-                $contentTypes[$key]['status_buckets'] = $model::query()
-                    ->selectRaw('status, COUNT(*) as status_count')
-                    ->groupBy('status')
-                    ->orderByDesc('status_count')->orderBy('status')
-                    ->get()
-                    ->map(fn ($row): array => [
-                        'value' => is_string($row->status) && $row->status !== '' ? $row->status : '(empty status)',
-                        'count' => (int) $row->status_count,
-                    ])->all();
-            }
+            $contentTypes[$key]['status_buckets'] = $model::query()
+                ->selectRaw('status, COUNT(*) as status_count')
+                ->groupBy('status')
+                ->orderByDesc('status_count')->orderBy('status')
+                ->get()
+                ->map(fn ($row): array => [
+                    'value' => is_string($row->status) && $row->status !== '' ? $row->status : '(empty status)',
+                    'count' => (int) $row->status_count,
+                ])->all();
 
-            {
-                $scheduleField = $type['schedule_field'];
-                $upcomingQuery = $model::query()
-                    ->whereDate($scheduleField, '>=', $today->toDateString())
-                    ->whereDate($scheduleField, '<=', $upcomingEnd->toDateString());
-                $contentTypes[$key]['upcoming_count'] = (clone $upcomingQuery)->count();
-                $contentTypes[$key]['upcoming_records'] = $upcomingQuery
-                    ->orderBy($scheduleField)->orderBy('id')->limit(5)
-                    ->get(['id', 'title', $scheduleField, 'status'])
-                    ->map(fn ($record): array => [
-                        'id' => (int) $record->id,
-                        'title' => (string) $record->title,
-                        'date' => CarbonImmutable::parse($record->{$scheduleField}, config('app.timezone'))->format('M j, Y'),
-                        'status' => is_string($record->status) && $record->status !== '' ? $record->status : '(empty status)',
-                    ])->all();
-            }
+            $scheduleField = $type['schedule_field'];
+            $upcomingQuery = $model::query()
+                ->whereDate($scheduleField, '>=', $today->toDateString())
+                ->whereDate($scheduleField, '<=', $upcomingEnd->toDateString());
+            $contentTypes[$key]['upcoming_count'] = (clone $upcomingQuery)->count();
+            $contentTypes[$key]['upcoming_records'] = $upcomingQuery
+                ->orderBy($scheduleField)->orderBy('id')->limit(5)
+                ->get(['id', 'title', $scheduleField, 'status'])
+                ->map(fn ($record): array => [
+                    'id' => (int) $record->id,
+                    'title' => (string) $record->title,
+                    'date' => CarbonImmutable::parse($record->{$scheduleField}, config('app.timezone'))->format('M j, Y'),
+                    'status' => is_string($record->status) && $record->status !== '' ? $record->status : '(empty status)',
+                ])->all();
 
-            if ($type['publication_field'] !== null) {
-                $publicationField = $type['publication_field'];
-                $publicationQuery = $model::query()
-                    ->where('status', $type['publication_status'])
-                    ->whereDate($publicationField, '>=', $recentStart->toDateString())
-                    ->whereDate($publicationField, '<=', $today->toDateString());
-                $contentTypes[$key]['recent_published_count'] = (clone $publicationQuery)->count();
-                $contentTypes[$key]['recent_publications'] = $publicationQuery
-                    ->orderByDesc($publicationField)->orderByDesc('id')->limit(5)
-                    ->get(['id', 'title', $publicationField])
-                    ->map(fn ($record): array => [
-                        'id' => (int) $record->id,
-                        'title' => (string) $record->title,
-                        'date' => CarbonImmutable::parse($record->{$publicationField}, config('app.timezone'))->format('M j, Y'),
-                    ])->all();
-            }
+            $publicationField = $type['publication_field'];
+            $publicationQuery = $model::query()
+                ->where('status', $type['publication_status'])
+                ->whereDate($publicationField, '>=', $recentStart->toDateString())
+                ->whereDate($publicationField, '<=', $today->toDateString());
+            $contentTypes[$key]['recent_published_count'] = (clone $publicationQuery)->count();
+            $contentTypes[$key]['recent_publications'] = $publicationQuery
+                ->orderByDesc($publicationField)->orderByDesc('id')->limit(5)
+                ->get(['id', 'title', $publicationField])
+                ->map(fn ($record): array => [
+                    'id' => (int) $record->id,
+                    'title' => (string) $record->title,
+                    'date' => CarbonImmutable::parse($record->{$publicationField}, config('app.timezone'))->format('M j, Y'),
+                ])->all();
         }
 
         $reviewQueues = [

@@ -4,8 +4,6 @@ namespace Tests\Feature;
 
 use App\Filament\Pages\ProductOpportunityAnalysis;
 use App\Filament\Resources\OpportunityScoringProfiles\OpportunityScoringProfileResource;
-use App\Models\Competitor;
-use App\Models\CompetitorOffer;
 use App\Models\Course;
 use App\Models\MarketTrend;
 use App\Models\OpportunityScoringProfile;
@@ -16,6 +14,7 @@ use Carbon\CarbonImmutable;
 use Filament\Facades\Filament;
 use Filament\Schemas\Schema;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use InvalidArgumentException;
 use Tests\TestCase;
@@ -175,57 +174,26 @@ class ProductOpportunityAnalysisServiceTest extends TestCase
         $this->assertStringContainsString('not permitted', $row['breakdown'][0]['explanation']);
     }
 
-    public function test_competitor_offer_signal_requires_exact_internal_note_match_and_current_source_snapshot(): void
+    public function test_legacy_competitor_scoring_factors_are_unknown_and_never_query_retired_tables(): void
     {
         $now = CarbonImmutable::parse('2026-10-20 12:00:00', config('app.timezone'));
         $this->product('Robotics course');
-        $competitor = Competitor::factory()->create(['name' => 'Synthetic competitor']);
-        CompetitorOffer::factory()->create([
-            'competitor_id' => $competitor->id,
-            'title' => 'Robotics competitor package',
-            'our_similar_offer' => 'Robotics course',
-            'observed_at' => $now->subDays(2),
-            'last_check' => $now->subDays(2)->toDateString(),
-            'source_url' => 'https://example.test/competitor/offer',
+        DB::table('opportunity_scoring_profiles')->insert([
+            'name' => 'Legacy competitor rubric', 'version' => 1, 'status' => 'active', 'is_provisional' => true,
+            'description' => 'Legacy profile retained for historical interpretation.',
+            'factors' => json_encode([[
+                'key' => 'competitor_presence', 'label' => 'Competitor presence', 'source' => 'competitor_offer_match',
+                'weight' => 1, 'direction' => 'higher', 'minimum_value' => 0, 'maximum_value' => 2, 'max_age_days' => 10,
+            ]], JSON_THROW_ON_ERROR),
+            'created_at' => now(), 'updated_at' => now(),
         ]);
-        $this->profile([[
-            'key' => 'competitor_presence', 'label' => 'Competitor presence', 'source' => 'competitor_offer_match',
-            'weight' => 1, 'direction' => 'higher', 'minimum_value' => 0, 'maximum_value' => 2, 'max_age_days' => 10,
-        ]], ['is_provisional' => false]);
 
-        $row = app(ProductOpportunityAnalysisService::class)->analyze(['competitor_offer.index' => true], now: $now)['rows'][0];
-
-        $this->assertSame(50.0, $row['score']);
-        $this->assertSame('unverified', $row['breakdown'][0]['status']);
-        $this->assertSame('provisional', $row['status']);
-        $this->assertSame('https://example.test/competitor/offer', $row['breakdown'][0]['evidence'][0]['source_url']);
-    }
-
-    public function test_competitor_offer_snapshot_record_time_does_not_replace_stale_observation_time(): void
-    {
-        $now = CarbonImmutable::now(config('app.timezone'));
-        $this->product('Robotics course');
-        $competitor = Competitor::factory()->create();
-        CompetitorOffer::factory()->create([
-            'competitor_id' => $competitor->id,
-            'title' => 'Undated competitor offer',
-            'our_similar_offer' => 'Robotics course',
-            'observed_at' => null,
-            'last_check' => $now->subDays(30)->toDateString(),
-            'source_url' => 'https://example.test/undated-offer',
-        ]);
-        $this->profile([[
-            'key' => 'competitor_presence', 'label' => 'Competitor presence', 'source' => 'competitor_offer_match',
-            'weight' => 1, 'direction' => 'higher', 'minimum_value' => 0, 'maximum_value' => 2, 'max_age_days' => 10,
-        ]]);
-
-        $row = app(ProductOpportunityAnalysisService::class)->analyze(['competitor_offer.index' => true], now: $now)['rows'][0];
+        $row = app(ProductOpportunityAnalysisService::class)->analyze([], now: $now)['rows'][0];
 
         $this->assertNull($row['score']);
         $this->assertSame('unknown', $row['status']);
-        $this->assertSame('stale', $row['breakdown'][0]['status']);
-        $this->assertNotNull($row['breakdown'][0]['evidence'][0]['observed_at']);
-        $this->assertSame('stale', $row['breakdown'][0]['evidence'][0]['freshness']);
+        $this->assertSame([], $row['breakdown'][0]['evidence']);
+        $this->assertStringContainsString('retired evidence source', $row['breakdown'][0]['explanation']);
     }
 
     public function test_active_profiles_are_immutable_and_new_versions_retire_the_previous_active_version(): void

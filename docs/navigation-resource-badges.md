@@ -39,8 +39,6 @@ The following resources have no badge because their current models/resources do 
 - `app/Filament/Resources/Camps/CampResource.php`
 - `app/Filament/Resources/CompetitionEntries/CompetitionEntryResource.php`
 - `app/Filament/Resources/Competitions/CompetitionResource.php`
-- `app/Filament/Resources/CompetitorOffers/CompetitorOfferResource.php`
-- `app/Filament/Resources/Competitors/CompetitorResource.php`
 - `app/Filament/Resources/CourseMaterials/CourseMaterialResource.php`
 - `app/Filament/Resources/Courses/CourseResource.php`
 - `app/Filament/Resources/CustomerContracts/CustomerContractResource.php`
@@ -58,11 +56,6 @@ The following resources have no badge because their current models/resources do 
 - `app/Filament/Resources/JobDescriptions/JobDescriptionResource.php`
 - `app/Filament/Resources/MeetingTopics/MeetingTopicResource.php`
 - `app/Filament/Resources/Meetings/MeetingResource.php`
-- `app/Filament/Resources/NewsletterSubscribers/NewsletterSubscriberResource.php`
-- `app/Filament/Resources/Newsletters/NewsletterResource.php`
-- `app/Filament/Resources/PaidCampaigns/PaidCampaignResource.php`
-- `app/Filament/Resources/Partners/PartnerResource.php`
-- `app/Filament/Resources/PotentialPartners/PotentialPartnerResource.php`
 - `app/Filament/Resources/ProductCosts/ProductCostResource.php`
 - `app/Filament/Resources/ProductPrices/ProductPriceResource.php`
 - `app/Filament/Resources/ProductResourceAllocations/ProductResourceAllocationResource.php`
@@ -79,7 +72,6 @@ The following resources have no badge because their current models/resources do 
 - `app/Filament/Resources/QuarterlyObjectives/QuarterlyObjectiveResource.php`
 - `app/Filament/Resources/SessionAssistances/SessionAssistanceResource.php`
 - `app/Filament/Resources/SessionAttendances/SessionAttendanceResource.php`
-- `app/Filament/Resources/SocialPosts/SocialPostResource.php`
 - `app/Filament/Resources/Students/StudentResource.php`
 - `app/Filament/Resources/Taxes/TaxResource.php`
 - `app/Filament/Resources/TestQuestions/TestQuestionResource.php`

@@ -1,5 +1,7 @@
 # Budget-versus-actual reporting: current-state audit v1
 
+> **Historical scope note (2026-11-25):** These audits predate issue #578. The PaidCampaign model/table and its `budget` field have since been retired from the active application. References below describe the state inspected when this audit was written, not a current model or supported input.
+
 **Status:** Engineering scope audit; comparison contract depends on versioned budgets and approved actuals  
 **Date:** 2026-10-27  
 **Roadmap:** [Issue #357](https://github.com/deputy-proxy/os-edventure-ro/issues/357)

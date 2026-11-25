@@ -7,8 +7,6 @@ use App\Models\BankStatementImportItem;
 use App\Models\Camp;
 use App\Models\Competition;
 use App\Models\CompetitionEntry;
-use App\Models\Competitor;
-use App\Models\CompetitorOffer;
 use App\Models\Course;
 use App\Models\CourseMaterial;
 use App\Models\Customer;
@@ -34,14 +32,9 @@ use App\Models\Group;
 use App\Models\IssuedInvoice;
 use App\Models\JobDescription;
 use App\Models\LegalDocument;
-use App\Models\Newsletter;
-use App\Models\NewsletterSubscriber;
-use App\Models\PaidCampaign;
-use App\Models\Partner;
 use App\Models\PaymentAllocation;
 use App\Models\PayrollPeriodInput;
 use App\Models\PayrollPolicy;
-use App\Models\PotentialPartner;
 use App\Models\Process;
 use App\Models\Product;
 use App\Models\ProductPrice;
@@ -55,7 +48,6 @@ use App\Models\QuarterlyObjective;
 use App\Models\Session;
 use App\Models\SessionAssistance;
 use App\Models\SessionAttendance;
-use App\Models\SocialPost;
 use App\Models\Student;
 use App\Models\Task;
 use App\Models\Tax;
@@ -128,8 +120,6 @@ class DomainModelServiceProvider extends ServiceProvider
             'payroll_policy' => PayrollPolicy::class,
             'payroll_period_input' => PayrollPeriodInput::class,
             'discount' => Discount::class,
-            'competitor' => Competitor::class,
-            'competitor_offer' => CompetitorOffer::class,
             'event' => EventModel::class,
             'event_participant' => EventParticipant::class,
             'event_price' => ProductPrice::class,
@@ -141,14 +131,10 @@ class DomainModelServiceProvider extends ServiceProvider
             'project' => Project::class,
             'project_phase' => ProjectPhase::class,
             'task' => Task::class,
-            'partner' => Partner::class,
-            'potential_partner' => PotentialPartner::class,
             'student' => Student::class,
             'progress_update' => ProgressUpdate::class,
             'session_assistance' => SessionAssistance::class,
             'session_attendance' => SessionAttendance::class,
-            'newsletter' => Newsletter::class,
-            'newsletter_subscriber' => NewsletterSubscriber::class,
             'product' => Product::class,
             'product_review' => ProductReview::class,
             'quarterly_objective' => QuarterlyObjective::class,
@@ -161,8 +147,6 @@ class DomainModelServiceProvider extends ServiceProvider
             'workshop_price' => ProductPrice::class,
             'workshop_material' => WorkshopMaterial::class,
             'workshop' => Workshop::class,
-            'social_post' => SocialPost::class,
-            'paid_campaign' => PaidCampaign::class,
             'test' => Test::class,
             'test_question' => TestQuestion::class,
             'test_submission' => TestSubmission::class,

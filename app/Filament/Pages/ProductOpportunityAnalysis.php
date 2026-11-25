@@ -37,7 +37,6 @@ class ProductOpportunityAnalysis extends Page
         $permissions = [
             'product.index' => hexa()->can('product.index'),
             'market_trend.index' => hexa()->can('market_trend.index'),
-            'competitor_offer.index' => hexa()->can('competitor_offer.index'),
         ];
         $data = app(ProductOpportunityAnalysisService::class)->analyze($permissions, [
             'search' => $this->search,

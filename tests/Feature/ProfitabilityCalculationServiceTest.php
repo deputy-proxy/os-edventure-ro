@@ -3,7 +3,6 @@
 namespace Tests\Feature;
 
 use App\Models\CustomerInvoice;
-use App\Models\PaidCampaign;
 use App\Models\Product;
 use App\Models\ProductCostAllocationSnapshot;
 use App\Models\ProductResource;
@@ -50,7 +49,6 @@ class ProfitabilityCalculationServiceTest extends TestCase
         $type = match (true) {
             $target instanceof Product => 'product',
             $target instanceof Project => 'project',
-            $target instanceof PaidCampaign => 'paid_campaign',
             default => 'unsupported',
         };
 

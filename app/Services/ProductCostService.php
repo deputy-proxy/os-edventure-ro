@@ -2,7 +2,6 @@
 
 namespace App\Services;
 
-use App\Models\PaidCampaign;
 use App\Models\Product;
 use App\Models\ProductCost;
 use App\Models\ProductCostAllocationSnapshot;
@@ -268,7 +267,7 @@ class ProductCostService
         }, 3);
     }
 
-    private function findTarget(?string $type, ?int $id): Product|Project|PaidCampaign|null
+    private function findTarget(?string $type, ?int $id): Product|Project|null
     {
         if ($type === null || $id === null) {
             return null;
@@ -277,7 +276,6 @@ class ProductCostService
         return match ($type) {
             'product' => Product::withTrashed()->find($id),
             'project' => Project::withTrashed()->find($id),
-            'paid_campaign' => PaidCampaign::withTrashed()->find($id),
             default => null,
         };
     }

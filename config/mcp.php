@@ -23,14 +23,11 @@ $executiveDataPermissions = [
     'employee.index',
     'customer.index',
     'customer_lead.index',
-    'competitor_offer.index',
     'project.index',
     'project_phase.index',
     'task.index',
     'task.view_all',
     'article.index',
-    'newsletter.index',
-    'paid_campaign.index',
 ];
 
 $kpiResultFields = [
@@ -595,18 +592,18 @@ return [
         ],
         'get_campaign_performance' => [
             'mcp_scope' => 'mcp.marketing.campaign-performance.read', 'operation_type' => 'read',
-            'domain_permissions' => ['paid_campaign.index'], 'record_scope' => McpGlobalRecordScope::class,
-            'allowed_fields' => ['as_of' => true, 'paid_campaigns' => ['current_count' => true, 'status_buckets' => ['value' => true, 'count' => true], 'upcoming_count' => true, 'recent_published_count' => true], 'google_ads' => ['from' => true, 'to' => true, 'row_count' => true, 'campaign_count' => true, 'latest_imported_at' => true, 'currency_totals' => ['currency_code' => true, 'impressions' => true, 'clicks' => true, 'cost_micros' => true, 'conversions' => true], 'campaign_rows' => ['campaign_id' => true, 'campaign_name' => true, 'currency_code' => true, 'impressions' => true, 'clicks' => true, 'cost_micros' => true, 'conversions' => true], 'source' => true, 'unit_notes' => true]],
+            'domain_permissions' => ['google_ads_metrics.view'], 'record_scope' => McpGlobalRecordScope::class,
+            'allowed_fields' => ['as_of' => true, 'google_ads' => ['from' => true, 'to' => true, 'row_count' => true, 'campaign_count' => true, 'latest_imported_at' => true, 'currency_totals' => ['currency_code' => true, 'impressions' => true, 'clicks' => true, 'cost_micros' => true, 'conversions' => true], 'campaign_rows' => ['campaign_id' => true, 'campaign_name' => true, 'currency_code' => true, 'impressions' => true, 'clicks' => true, 'cost_micros' => true, 'conversions' => true], 'source' => true, 'unit_notes' => true]],
         ],
         'get_google_ads_import_status' => [
             'mcp_scope' => 'mcp.marketing.google-ads-imports.read', 'operation_type' => 'read',
-            'domain_permissions' => ['paid_campaign.index'], 'record_scope' => McpGlobalRecordScope::class,
+            'domain_permissions' => ['google_ads_metrics.view'], 'record_scope' => McpGlobalRecordScope::class,
             'allowed_fields' => ['as_of' => true, 'configurations' => ['active' => true, 'status' => true, 'last_status' => true, 'last_checked_at' => true, 'last_error_code' => true, 'batch_count' => true], 'batches' => ['period_start' => true, 'period_end' => true, 'source' => true, 'source_version' => true, 'status' => true, 'row_count' => true, 'error_code' => true, 'started_at' => true, 'completed_at' => true], 'privacy_note' => true],
         ],
         'get_market_observations' => [
             'mcp_scope' => 'mcp.marketing.market-observations.read', 'operation_type' => 'read',
-            'domain_permissions' => ['competitor_offer.index', 'market_trend.index'], 'record_scope' => McpGlobalRecordScope::class,
-            'allowed_fields' => ['as_of' => true, 'market_trends' => ['name' => true, 'category' => true, 'metric_key' => true, 'value' => true, 'unit' => true, 'market' => true, 'segment' => true, 'period_start' => true, 'period_end' => true, 'source_name' => true, 'source_url' => true, 'observed_at' => true, 'change_pct' => true, 'confidence' => true, 'data_status' => true, 'source_type' => true, 'freshness_status' => true, 'verification_status' => true, 'source_reference' => true, 'source_revision' => true, 'missing_reason' => true, 'methodology' => true], 'competitor_observations' => ['title' => true, 'offer_type' => true, 'offer_price' => true, 'currency' => true, 'price_basis' => true, 'source_url' => true, 'valid_from' => true, 'valid_until' => true, 'observed_at' => true, 'source_status' => true], 'market_trends_source_note' => true],
+            'domain_permissions' => ['market_trend.index'], 'record_scope' => McpGlobalRecordScope::class,
+            'allowed_fields' => ['as_of' => true, 'market_trends' => ['name' => true, 'category' => true, 'metric_key' => true, 'value' => true, 'unit' => true, 'market' => true, 'segment' => true, 'period_start' => true, 'period_end' => true, 'source_name' => true, 'source_url' => true, 'observed_at' => true, 'change_pct' => true, 'confidence' => true, 'data_status' => true, 'source_type' => true, 'freshness_status' => true, 'verification_status' => true, 'source_reference' => true, 'source_revision' => true, 'missing_reason' => true, 'methodology' => true], 'market_trends_source_note' => true],
         ],
         'get_academic_overview' => [
             'mcp_scope' => 'mcp.academic.overview.read', 'operation_type' => 'read',

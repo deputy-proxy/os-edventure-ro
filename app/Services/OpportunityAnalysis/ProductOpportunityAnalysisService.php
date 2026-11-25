@@ -2,11 +2,8 @@
 
 namespace App\Services\OpportunityAnalysis;
 
-use App\Filament\Resources\CompetitorOffers\CompetitorOfferResource;
 use App\Filament\Resources\MarketTrends\MarketTrendResource;
 use App\Filament\Resources\Products\ProductResource;
-use App\Models\CompetitorOffer;
-use App\Models\CompetitorOfferObservation;
 use App\Models\MarketTrend;
 use App\Models\OpportunityScoringProfile;
 use App\Models\Product;
@@ -183,61 +180,7 @@ class ProductOpportunityAnalysisService
             ];
         }
 
-        if (! ($permissions['competitor_offer.index'] ?? false)) {
-            return $this->unknown('Access to competitor-offer evidence is not permitted.');
-        }
-        $offers = CompetitorOffer::query()
-            ->whereNotNull('our_similar_offer')
-            ->whereRaw('LOWER(TRIM(our_similar_offer)) = ?', [mb_strtolower(trim((string) $product->title))])
-            ->orderByDesc('observed_at')->orderByDesc('id')->get();
-        if ($offers->isEmpty()) {
-            return $this->unknown('No competitor offer has an exact internal-offer note match for this product.');
-        }
-        $evidence = [];
-        $freshCount = 0;
-        $hasCurrentTimestamp = false;
-        foreach ($offers as $offer) {
-            $latestObservation = $offer->observations()->orderByDesc('observed_at')->orderByDesc('id')->first();
-            if ($latestObservation instanceof CompetitorOfferObservation) {
-                $observedAt = $offer->observed_at ?? $offer->last_check;
-                $sourceStatus = $latestObservation->source_status;
-                $sourceUrl = $latestObservation->source_url;
-            } else {
-                $observedAt = $offer->observed_at ?? $offer->last_check;
-                $sourceStatus = 'unknown';
-                $sourceUrl = $offer->source_url;
-            }
-            $competitorName = $offer->competitor()->value('name');
-            $stale = $this->isStale($observedAt, $factor['max_age_days'] ?? null, $now);
-            if (! $stale) {
-                $hasCurrentTimestamp = true;
-                if ($sourceStatus === 'provided') {
-                    $freshCount++;
-                }
-            }
-            $evidence[] = [
-                'label' => $offer->title, 'source_name' => is_string($competitorName) ? $competitorName : null,
-                'source_url' => $sourceUrl,
-                'observed_at' => $observedAt ? CarbonImmutable::parse($observedAt)->toIso8601String() : null,
-                'freshness' => $stale ? 'stale' : ($sourceStatus === 'provided' ? 'current' : 'unknown'),
-                'record_id' => $offer->id,
-                'detail_url' => CompetitorOfferResource::getUrl('view', ['record' => $offer]),
-            ];
-        }
-        if ($freshCount === 0) {
-            return [
-                'value' => null,
-                'status' => $hasCurrentTimestamp ? 'unknown' : 'stale',
-                'explanation' => $hasCurrentTimestamp
-                    ? 'Matching competitor offers have no source-provided observation.'
-                    : 'Matching competitor-offer evidence exists, but all matching observations are stale or undated.',
-                'evidence' => $evidence,
-            ];
-        }
-
-        $hasStaleOrUnknown = $freshCount !== $offers->count();
-
-        return ['value' => $freshCount, 'status' => $hasStaleOrUnknown ? 'partial' : 'unverified', 'explanation' => 'Count of current competitor offers whose internal comparison note exactly matches this product title; no price equivalence is inferred.', 'evidence' => $evidence];
+        return $this->unknown('This scoring profile uses a retired evidence source. Reconfigure it with an approved Market Trends factor.');
     }
 
     /** @return array{value: null, status: string, explanation: string, evidence: array<int, array<string, mixed>>} */

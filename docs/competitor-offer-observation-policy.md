@@ -1,5 +1,7 @@
 # Competitor offer observation policy
 
+> **Scope update (2026-11-25):** Competitor, competitor-offer, and offer-observation ownership has been retired from `os.edventure.ro` under issue #578. These sections are historical audit/requirements context, not active application functionality. The active Market Analysis surface retains Google Ads metrics and Market Trends only.
+
 **Policy version:** `v1`  
 **Effective date:** 2026-10-27  
 **Scope:** Manual competitor-offer observations in os-edventure-ro.

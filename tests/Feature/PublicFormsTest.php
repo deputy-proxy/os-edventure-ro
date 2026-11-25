@@ -7,7 +7,6 @@ use App\Models\CompetitionEntry;
 use App\Models\Course;
 use App\Models\Customer;
 use App\Models\CustomerLead;
-use App\Models\NewsletterSubscriber;
 use App\Models\ProductReview;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -54,21 +53,6 @@ class PublicFormsTest extends TestCase
             'product_interest' => 'Kids course',
         ])->assertSessionHasErrors(['email', 'privacy_consent']);
         $this->assertDatabaseCount('customer_leads', 0);
-    }
-
-    public function test_newsletter_subscription_is_idempotent_by_email(): void
-    {
-        $payload = [
-            'first_name' => 'Ari',
-            'last_name' => 'Pop',
-            'email' => 'ari@example.test',
-            'privacy_consent' => '1',
-        ];
-
-        $this->post(route('public.newsletter.store'), $payload)->assertRedirect();
-        $this->post(route('public.newsletter.store'), $payload)->assertRedirect();
-
-        $this->assertDatabaseCount('newsletter_subscribers', 1);
     }
 
     public function test_competition_entry_is_bound_to_route_competition(): void
@@ -484,27 +468,5 @@ class PublicFormsTest extends TestCase
         ])->assertSessionHasErrors('email');
 
         $this->assertDatabaseCount('customer_leads', 1);
-    }
-
-    public function test_racing_newsletter_subscription_remains_idempotent(): void
-    {
-        $insertedConcurrentSubscriber = false;
-        NewsletterSubscriber::creating(function (NewsletterSubscriber $subscriber) use (&$insertedConcurrentSubscriber): void {
-            if ($insertedConcurrentSubscriber) {
-                return;
-            }
-            $insertedConcurrentSubscriber = true;
-            DB::table('newsletter_subscribers')->insert([
-                'first_name' => 'Concurrent', 'last_name' => 'Subscriber', 'email' => $subscriber->email,
-                'created_at' => now(), 'updated_at' => now(),
-            ]);
-        });
-
-        $this->post(route('public.newsletter.store'), [
-            'first_name' => 'Ari', 'last_name' => 'Pop', 'email' => 'racing-newsletter@example.test',
-            'privacy_consent' => '1',
-        ])->assertRedirect()->assertSessionHasNoErrors();
-
-        $this->assertDatabaseCount('newsletter_subscribers', 1);
     }
 }

@@ -33,7 +33,6 @@ class ExecutiveKpiCatalogueTest extends TestCase
             'unknown_lead_source_count',
             'open_task_count',
             'overdue_task_count',
-            'competitor_offer_snapshot_count',
         ];
         foreach ($catalogue['definitions'] as $definition) {
             $key = $definition['key'];
@@ -49,7 +48,7 @@ class ExecutiveKpiCatalogueTest extends TestCase
             $this->assertNotSame('', trim($definition['permission']));
             $this->assertNotSame('', trim($definition['missing_data']));
             $this->assertNotSame('', trim($definition['description']));
-            $this->assertContains($definition['unit'], ['records', 'snapshots']);
+            $this->assertSame('records', $definition['unit']);
         }
     }
 
@@ -256,7 +255,7 @@ class ExecutiveKpiCatalogueTest extends TestCase
         $this->assertNotContains('revenue', $keys);
         $this->assertNotContains('profit_margin', $keys);
         foreach (config('kpi_catalogue.definitions') as $definition) {
-            $this->assertContains($definition['unit'], ['records', 'snapshots']);
+            $this->assertSame('records', $definition['unit']);
         }
     }
 }

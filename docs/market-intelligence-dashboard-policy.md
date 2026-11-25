@@ -1,5 +1,7 @@
 # Market intelligence dashboard and opportunity-signal policy
 
+> **Scope update (2026-11-25):** Competitor, competitor-offer, and offer-observation ownership has been retired from `os.edventure.ro` under issue #578. These sections are historical audit/requirements context, not active application functionality. The active Market Analysis surface retains Google Ads metrics and Market Trends only.
+
 **Version:** 1.0  
 **Effective date:** 2026-10-27  
 **Scope:** Stored market-trend observations, competitor-offer observations, and imported Google Ads campaign-day metrics shown in os-edventure-ro.
@@ -33,7 +35,7 @@ The dashboard is decision support, not an automatic pricing, product-launch, bud
 - A zero denominator makes the corresponding ratio unavailable. No divide-by-zero fallback or invented zero ratio is allowed.
 - Provider-reported conversions are not treated as unique customers or paid/recognized revenue. These values must not be labelled CAC, customer acquisition, ROI, or profit.
 - Imported metric freshness is reported separately from campaign performance. An empty window means no stored rows were available, not that spend, impressions, or conversions were zero.
-- Access to imported campaign metrics requires `paid_campaign.index`; competitor and market-trend data retain their own resource permissions.
+- Access to imported Google Ads metrics requires `google_ads_metrics.view`; Market Trends requires `market_trend.index`. Competitor and PaidCampaign resources have been retired.
 
 ## Opportunity-signal review
 

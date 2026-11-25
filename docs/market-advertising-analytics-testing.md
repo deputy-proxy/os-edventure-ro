@@ -32,7 +32,7 @@ The CI quality gate remains composer test; the focused commands are for local di
 | Google Ads health | healthy, incomplete, stale, retryable_error, invalid_data, error | Health distinguishes complete/fresh coverage, missing period coverage, old data, retryable provider failure, invalid currency/data, and non-retryable failure. |
 | Market dashboard | active observations, including explicit missing values | Source, observation period, provenance, freshness, verification, and missing reason remain visible; missing values are not replaced with zero. |
 | Advertising dashboard | rows within the inclusive 30-day window through the supplied current date | Campaign and currency totals reconcile to stored campaign-day rows; unlike currencies remain separate. Rows outside the window are excluded. |
-| Dashboard authorization | market-trend and paid-campaign permissions | Unauthorized sections expose no counts, totals, records, or filter options for that data domain. |
+| Dashboard authorization | market-trend and independent Google Ads permissions | Unauthorized sections expose no counts, totals, records, or filter options for that data domain. |
 | Empty advertising dataset | no qualifying campaign-day rows | Row and campaign counts are zero, totals are empty, and the dashboard renders its explicit empty state. |
 
 These are application-level tests against synthetic data. They do not establish live provider access, source accuracy, production account reconciliation, or business approval of provisional market definitions.

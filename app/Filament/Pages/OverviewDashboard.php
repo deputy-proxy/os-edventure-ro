@@ -3,12 +3,9 @@
 namespace App\Filament\Pages;
 
 use App\Filament\Resources\Articles\ArticleResource;
-use App\Filament\Resources\CompetitorOffers\CompetitorOfferResource;
 use App\Filament\Resources\CustomerLeads\CustomerLeadResource;
 use App\Filament\Resources\Customers\CustomerResource;
 use App\Filament\Resources\Employees\EmployeeResource;
-use App\Filament\Resources\Newsletters\NewsletterResource;
-use App\Filament\Resources\PaidCampaigns\PaidCampaignResource;
 use App\Filament\Resources\Projects\ProjectResource;
 use App\Filament\Resources\Students\StudentResource;
 use App\Filament\Resources\Tasks\TaskResource;
@@ -83,12 +80,9 @@ class OverviewDashboard extends BaseDashboard
             'employee.index' => EmployeeResource::class,
             'customer.index' => CustomerResource::class,
             'customer_lead.index' => CustomerLeadResource::class,
-            'competitor_offer.index' => CompetitorOfferResource::class,
             'project.index' => ProjectResource::class,
             'task.index' => TaskResource::class,
             'article.index' => ArticleResource::class,
-            'newsletter.index' => NewsletterResource::class,
-            'paid_campaign.index' => PaidCampaignResource::class,
         ];
         $permissions = [];
 
@@ -106,7 +100,6 @@ class OverviewDashboard extends BaseDashboard
             'unknown_lead_source_count' => ['permission' => 'customer_lead.index', 'resource' => CustomerLeadResource::class],
             'open_task_count' => ['permission' => 'task.index', 'resource' => TaskResource::class],
             'overdue_task_count' => ['permission' => 'task.index', 'resource' => TaskResource::class],
-            'competitor_offer_snapshot_count' => ['permission' => 'competitor_offer.index', 'resource' => CompetitorOfferResource::class],
         ];
 
         foreach ($summary['kpis']['results'] as &$kpi) {

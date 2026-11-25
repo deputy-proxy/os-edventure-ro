@@ -5,10 +5,7 @@ namespace App\Filament\Pages;
 use App\Filament\Clusters\Marketing\MarketingCluster;
 use App\Filament\Resources\Articles\ArticleResource;
 use App\Filament\Resources\CompetitionEntries\CompetitionEntryResource;
-use App\Filament\Resources\Newsletters\NewsletterResource;
-use App\Filament\Resources\PaidCampaigns\PaidCampaignResource;
 use App\Filament\Resources\ProductReviews\ProductReviewResource;
-use App\Filament\Resources\SocialPosts\SocialPostResource;
 use App\Services\ContentManagementDashboardData;
 use Filament\Pages\Page;
 use Hexters\HexaLite\HasHexaLite;
@@ -33,9 +30,6 @@ class ContentManagement extends Page
     {
         $resourceMap = [
             'articles' => [ArticleResource::class, 'article.index', 'article.create'],
-            'newsletters' => [NewsletterResource::class, 'newsletter.index', 'newsletter.create'],
-            'social_posts' => [SocialPostResource::class, 'social_post.index', 'social_post.create'],
-            'paid_campaigns' => [PaidCampaignResource::class, 'paid_campaign.index', 'paid_campaign.create'],
         ];
         $reviewResourceMap = [
             'product_reviews' => [ProductReviewResource::class, 'product_review.index'],
