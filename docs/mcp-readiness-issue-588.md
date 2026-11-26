@@ -4,21 +4,21 @@
 **Last verified:** 2026-11-26  
 **Production write enablement:** disabled; this document does not authorize a configuration or permission change.
 
-This record is the evidence index for issue #588. It separates repository-verifiable controls from decisions that only accountable domain owners, the policy owner, staging operator and independent reviewer can make. Blank approval fields are intentional: implementation work must not manufacture consent.
+This record is the evidence index for issue #588. It separates repository-verifiable controls from decisions that only authorized role-holders, the policy owner, staging operator and independent reviewer can make. Approvals are role-based and may be given by any one eligible approver; named individuals do not need to be pre-registered. The authenticated user who makes each decision must still be recorded in the restricted evidence record.
 
 ## 1. Domain-owner privacy approvals
 
-No production approval is inferred from issue #539's development authorization. Before any extended-domain production approval, record one signed approval per domain below. Attach the signed record to a restricted project evidence location; do not put employee/student samples, sensitive values, credentials or private attachments in GitHub.
+No production approval is inferred from issue #539's development authorization. Before any extended-domain production approval, record one signed approval per domain below from any one eligible role-holder. Attach the signed record to a restricted project evidence location; do not put employee/student samples, sensitive values, credentials or private attachments in GitHub.
 
-| Domain | Accountable owner (name/role) | Approved audience / roles | Approved fields and purpose | Record scope / exclusions | Decision and date | Evidence reference |
+| Domain | Eligible approver role(s), any one may approve | Approved audience / roles | Approved fields and purpose | Record scope / exclusions | Decision and date | Evidence reference |
 | --- | --- | --- | --- | --- | --- | --- |
-| HR | **Pending** | Pending | Pending exact field allowlist | Aggregate/record scope and prohibited fields to be explicitly confirmed | Not approved | Not supplied |
-| Products | **Pending** | Pending | Pending exact field allowlist | Product scope, cost/price sensitivity and effective-date semantics to be explicitly confirmed | Not approved | Not supplied |
-| Marketing | **Pending** | Pending | Pending exact field allowlist | Campaign/observation scope, source provenance and commercial restrictions to be explicitly confirmed | Not approved | Not supplied |
-| Academic | **Pending** | Pending | Pending exact field allowlist | Student/group/session scope, minimum aggregation and student privacy exclusions to be explicitly confirmed | Not approved | Not supplied |
+| HR | Owner OR General Director | Pending | Pending exact field allowlist | Aggregate/record scope and prohibited fields to be explicitly confirmed | Not approved | Not supplied |
+| Products | Owner OR General Director | Pending | Pending exact field allowlist | Product scope, cost/price sensitivity and effective-date semantics to be explicitly confirmed | Not approved | Not supplied |
+| Marketing | Owner OR General Director | Pending | Pending exact field allowlist | Campaign/observation scope, source provenance and commercial restrictions to be explicitly confirmed | Not approved | Not supplied |
+| Academic | Owner OR General Director OR Academic Director | Pending | Pending exact field allowlist | Student/group/session scope, minimum aggregation and student privacy exclusions to be explicitly confirmed | Not approved | Not supplied |
 
 Each domain approval must identify:
-- the owner by name and accountable role, and the authority by which they approve;
+- the authenticated approver and their eligible role (Owner, General Director, or for Academic, Academic Director); any one eligible role-holder is sufficient, with no joint-approval requirement;
 - the exact tool names and field paths, including nested fields, not a broad domain label;
 - the purpose, audience and permitted roles/client identity;
 - record scope, aggregation threshold where relevant, and prohibited fields;
@@ -32,12 +32,12 @@ The current implementation's allowlists and aggregate-only HR/academic behavior 
 
 **Decision: pending.** No MCP-specific retention duration or deletion schedule has been approved. The current safe behavior remains: dedicated MCP approvals and execution audit rows are retained; application-level deletion is denied; no automatic MCP audit pruning is scheduled. The 365-day Spatie Activity Log cleanup setting does not apply to these tables.
 
-The policy owner and legal/privacy reviewer must complete this decision record before production approval:
+The audit-retention decision may be approved by either the Owner or the General Director; joint approval is not required. A legal/privacy reviewer may advise, but is not a mandatory co-approver. Record the authenticated approver and role in the restricted evidence record:
 
 | Decision | Required value | Current status |
 | --- | --- | --- |
-| Accountable policy owner | Named role and person | Pending |
-| Legal/privacy reviewer | Named role and person | Pending |
+| Authorized approver | Owner OR General Director (any one) | Pending |
+| Legal/privacy advice (if obtained) | Reviewer and advice reference | Pending / optional |
 | Retention duration by record class | mcp_approvals, mcp_execution_audits, related backups and exports considered separately | Pending |
 | Retention start event | Created, executed, closed, or another explicitly justified event per class | Pending |
 | Legal hold / incident preservation | Trigger, authority, release and audit procedure | Pending |
@@ -95,7 +95,7 @@ Do not mark the suite passed until every case above has a recorded result from t
 
 ## 5. Independent review and release gate
 
-The independent reviewer must inspect the complete staging evidence, verify the separation of duties and confirm no production system was touched. Record the reviewer name/role, decision, date, evidence reference and any conditions in the restricted evidence location.
+The independent reviewer must inspect the complete staging evidence, verify the separation of duties and confirm no production system was touched. Record the independent reviewer's name/role, decision, date, evidence reference and any conditions in the restricted evidence location. This independent staging reviewer is separate from the role-based domain and audit-policy approvers.
 
 The project owner must then make a separate, explicit decision on controlled-write enablement after reviewing:
 1. all four domain privacy approvals (where extended domains are proposed for production);
