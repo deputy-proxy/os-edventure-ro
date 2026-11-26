@@ -210,10 +210,10 @@ class CanonicalIssuedInvoiceSchemaTest extends TestCase
         }
     }
 
-    public function test_mysql_check_constraints_reject_invalid_document_status_and_line_metadata(): void
+    public function test_mysql_and_mariadb_check_constraints_reject_invalid_document_status_and_line_metadata(): void
     {
-        if (DB::getDriverName() !== 'mysql') {
-            $this->markTestSkipped('MySQL-specific CHECK constraints are exercised by the MySQL CI job.');
+        if (! in_array(DB::getDriverName(), ['mysql', 'mariadb'], true)) {
+            $this->markTestSkipped('CHECK constraints are exercised by the MySQL and MariaDB CI jobs.');
         }
 
         $entity = LegalEntity::query()->create([
@@ -226,7 +226,7 @@ class CanonicalIssuedInvoiceSchemaTest extends TestCase
                 'document_type' => IssuedInvoice::TYPE_INVOICE,
                 'document_status' => 'not-a-supported-state',
             ]);
-            $this->fail('Unsupported document status was accepted by MySQL.');
+            $this->fail('Unsupported document status was accepted by MySQL or MariaDB.');
         } catch (QueryException) {
             $this->assertDatabaseCount('issued_invoices', 0);
         }
@@ -241,7 +241,7 @@ class CanonicalIssuedInvoiceSchemaTest extends TestCase
                 'unit_code' => 'C62', 'unit_price_net' => '1.000000',
                 'discount_amount' => '0.00', 'net_amount' => '1.00',
             ]);
-            $this->fail('Zero line number was accepted by MySQL.');
+            $this->fail('Zero line number was accepted by MySQL or MariaDB.');
         } catch (QueryException) {
             $this->assertDatabaseCount('issued_invoice_lines', 0);
         }

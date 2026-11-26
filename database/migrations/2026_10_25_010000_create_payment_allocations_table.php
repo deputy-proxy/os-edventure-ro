@@ -34,7 +34,7 @@ return new class extends Migration
             $table->index(['vendor_invoice_id', 'status'], 'payment_allocations_vendor_invoice_status_index');
         });
 
-        if (DB::getDriverName() === 'mysql') {
+        if (in_array(DB::getDriverName(), ['mysql', 'mariadb'], true)) {
             DB::statement('ALTER TABLE payment_allocations ADD CONSTRAINT payment_allocations_positive_amount_check CHECK (amount_decimal > 0)');
             DB::statement("ALTER TABLE payment_allocations ADD CONSTRAINT payment_allocations_kind_check CHECK (allocation_kind IN ('invoice', 'fee'))");
             DB::statement("ALTER TABLE payment_allocations ADD CONSTRAINT payment_allocations_status_check CHECK (status IN ('proposed', 'confirmed', 'reversed', 'rejected'))");

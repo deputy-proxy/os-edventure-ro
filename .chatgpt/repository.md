@@ -1,6 +1,6 @@
 # Repository-specific development configuration
 
-Last verified: 2026-11-22. Exact resolved versions are recorded in the cross-repository matrix at [Cr8or](https://github.com/deputy-proxy/cr8or/blob/main/.chatgpt/repository-versions.md). Re-check manifests, lockfiles, and workflows before each implementation.
+Last verified: 2026-11-26. Exact resolved versions are recorded in the cross-repository matrix at [Cr8or](https://github.com/deputy-proxy/cr8or/blob/main/.chatgpt/repository-versions.md). Re-check manifests, lockfiles, and workflows before each implementation.
 
 ## Runtime and resolved framework versions
 - PHP constraint: `^8.4.1`; CI uses PHP 8.4.
@@ -14,10 +14,11 @@ Source: `.github/workflows/tests.yml`.
 - PHP job: Composer validation, documented-script verification, install, environment setup, frontend build for Vite-dependent feature tests, SQLite migrations, PHP syntax parsing, Pint, `composer test`, and `composer audit --locked`.
 - Static analysis: `composer analyse` using PHPStan 2/Larastan 3 and the reviewed baseline.
 - MySQL job: MySQL 8.0 migrations plus database-sensitive regression tests.
+- MariaDB job: MariaDB 11.8.9 migrations plus a focused database-sensitive regression suite, MariaDB CHECK-constraint and row-lock coverage, and a real database-queue/scheduler runtime smoke test.
 - Frontend job: Composer install for Filament theme assets, `npm ci`, `npm run build`, and `npm audit --audit-level=high`.
 
 ## Local validation
-Follow the actual current workflow and Composer scripts. At minimum, validate Composer configuration, npm build, SQLite migrations, PHP syntax, Pint, tests, PHPStan, Composer audit, npm audit, and documented Composer scripts. Run MySQL 8.0 regression tests for database-sensitive changes.
+Follow the actual current workflow and Composer scripts. At minimum, validate Composer configuration, npm build, SQLite migrations, PHP syntax, Pint, tests, PHPStan, Composer audit, npm audit, and documented Composer scripts. Run both MySQL 8.0 and MariaDB 11.8.9 regression gates for database-sensitive changes.
 
 ## Security and migration notes
 - Re-run `composer audit --locked` against the current lockfile. Earlier audit findings were against a previous Laravel 12 dependency tree and must not be presented as current findings without reproducing them.
