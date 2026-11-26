@@ -326,10 +326,10 @@ class ProductCostAllocationHistoryTest extends TestCase
         }
     }
 
-    public function test_mysql_recalculation_uses_row_locks_for_concurrent_versioning(): void
+    public function test_mysql_and_mariadb_recalculation_uses_row_locks_for_concurrent_versioning(): void
     {
-        if (DB::connection()->getDriverName() !== 'mysql') {
-            $this->markTestSkipped('Row-lock SQL is verified by the dedicated MySQL CI job.');
+        if (! in_array(DB::connection()->getDriverName(), ['mysql', 'mariadb'], true)) {
+            $this->markTestSkipped('Row-lock SQL is verified by the MySQL and MariaDB CI jobs.');
         }
 
         $resource = $this->resource();

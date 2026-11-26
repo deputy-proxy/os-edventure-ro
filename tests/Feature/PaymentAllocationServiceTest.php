@@ -10,8 +10,10 @@ use App\Models\Transaction;
 use App\Models\User;
 use App\Models\VendorInvoice;
 use App\Services\Finance\PaymentAllocationService;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
 use Tests\TestCase;
@@ -25,6 +27,42 @@ class PaymentAllocationServiceTest extends TestCase
         parent::setUp();
         config(['app.key' => 'base64:'.base64_encode(str_repeat('a', 32))]);
         Gate::before(static fn (): bool => true);
+    }
+
+    public function test_mysql_and_mariadb_check_constraints_reject_invalid_payment_allocations(): void
+    {
+        if (! in_array(DB::connection()->getDriverName(), ['mysql', 'mariadb'], true)) {
+            $this->markTestSkipped('Payment allocation CHECK constraints are exercised by the MySQL and MariaDB CI jobs.');
+        }
+
+        [$payment, $actor, $invoice] = $this->paymentFixture();
+        $base = [
+            'transaction_id' => $payment->id,
+            'customer_invoice_id' => $invoice->id,
+            'vendor_invoice_id' => null,
+            'allocation_kind' => 'invoice',
+            'amount_decimal' => '10.00',
+            'currency_code' => 'RON',
+            'status' => 'proposed',
+            'reason' => 'Database constraint regression',
+            'created_by' => $actor->id,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ];
+
+        foreach ([
+            ['amount_decimal' => '0.00'],
+            ['allocation_kind' => 'unsupported'],
+            ['status' => 'unsupported'],
+            ['allocation_kind' => 'fee'],
+        ] as $invalid) {
+            try {
+                DB::table('payment_allocations')->insert(array_replace($base, $invalid));
+                $this->fail('The database accepted a payment allocation that violates a CHECK constraint.');
+            } catch (QueryException) {
+                $this->assertDatabaseCount('payment_allocations', 0);
+            }
+        }
     }
 
     public function test_proposed_allocation_is_not_counted_until_confirmed_and_partial_payment_is_explicit(): void
