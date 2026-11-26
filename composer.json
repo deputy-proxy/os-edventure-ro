@@ -42,6 +42,7 @@
         "nyholm/psr7": "^1.8.2",
         "rappasoft/laravel-authentication-log": "^6.0",
         "relaticle/comments": "^1.1.1",
+        "resend/resend-php": "^1.0",
         "smalot/pdfparser": "^2.12",
         "spatie/laravel-activitylog": "^5.0",
         "symfony/psr-http-message-bridge": "^8.1",
