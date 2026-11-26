@@ -4,11 +4,11 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "69f59dcd514e71278062fe1706361e05",
+    "content-hash": "e823b2320f18d9f61ddf553a46022bc4",
     "packages": [
         {
             "name": "alizharb/filament-activity-log",
-            "version": "dev-main",
+            "version": "dev-6-587",
             "dist": {
                 "type": "path",
                 "url": "./packages/alizharb/filament-activity-log",
@@ -8352,6 +8352,66 @@
                 }
             ],
             "time": "2026-08-17T12:03:48+00:00"
+        },
+        {
+            "name": "resend/resend-php",
+            "version": "v1.19.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/resend/resend-php.git",
+                "reference": "dcdb98f3dca2f2adb084924d3e9515edf7bff106"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/resend/resend-php/zipball/dcdb98f3dca2f2adb084924d3e9515edf7bff106",
+                "reference": "dcdb98f3dca2f2adb084924d3e9515edf7bff106",
+                "shasum": ""
+            },
+            "require": {
+                "guzzlehttp/guzzle": "^7.8.2 || ^8.0",
+                "guzzlehttp/psr7": "^2.6.3 || ^3.0",
+                "php": "^8.1.0",
+                "psr/http-client": "^1.0"
+            },
+            "require-dev": {
+                "friendsofphp/php-cs-fixer": "^3.13",
+                "mockery/mockery": "^1.6",
+                "pestphp/pest": "^1.0|^2.0|^3.0|^4.0|^5.0"
+            },
+            "type": "library",
+            "autoload": {
+                "files": [
+                    "src/Resend.php"
+                ],
+                "psr-4": {
+                    "Resend\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Resend and contributors",
+                    "homepage": "https://github.com/resend/resend-php/contributors"
+                }
+            ],
+            "description": "Resend PHP library.",
+            "homepage": "https://resend.com/",
+            "keywords": [
+                "api",
+                "client",
+                "php",
+                "resend",
+                "sdk"
+            ],
+            "support": {
+                "issues": "https://github.com/resend/resend-php/issues",
+                "source": "https://github.com/resend/resend-php/tree/v1.19.0"
+            },
+            "time": "2026-11-20T01:37:05+00:00",
+            "published-time": "2026-11-20T02:48:58+00:00"
         },
         {
             "name": "ryangjchandler/blade-capture-directive",
