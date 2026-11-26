@@ -241,7 +241,9 @@ jobs:
           php artisan test
           tests/Feature/PublicFormsTest.php
           tests/Feature/DatabaseIntegrityAuditTest.php
+          tests/Feature/Operations/QueueRuntimeTest.php
           tests/Feature/ProductCostAllocationHistoryTest.php
+          tests/Feature/PaymentAllocationServiceTest.php
           tests/Feature/ProfitabilityCalculationServiceTest.php
           tests/Feature/ProfitabilityPreviewAuthorizationTest.php
           tests/Feature/ProfitabilityReportServiceTest.php
@@ -272,6 +274,99 @@ jobs:
           tests/Feature/ExecutiveKpiCatalogueTest.php
           tests/Feature/KpiCatalogueRegistryTest.php
           tests/Feature/KpiDefinitionTest.php
+
+  mariadb:
+    name: MariaDB 11.8.9 migration and integrity regression tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      mariadb:
+        image: mariadb:11.8.9
+        env:
+          MARIADB_ROOT_PASSWORD: password
+          MARIADB_DATABASE: os_edventure_ro_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+    env:
+      APP_ENV: testing
+      DOMAIN_RETIREMENT_DATA_SIGNOFF: 'true'
+      DB_CONNECTION: mariadb
+      DB_HOST: 127.0.0.1
+      DB_PORT: 3306
+      DB_DATABASE: os_edventure_ro_test
+      DB_USERNAME: root
+      DB_PASSWORD: password
+      CACHE_STORE: array
+      SESSION_DRIVER: array
+      QUEUE_CONNECTION: sync
+      MAIL_MAILER: array
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # v2
+        with:
+          php-version: '8.4'
+          tools: composer:v2
+          extensions: bcmath, curl, dom, fileinfo, gd, intl, mbstring, pdo_mysql, xml, zip
+          coverage: none
+
+      - name: Cache Composer dependencies
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/composer
+          key: ${{ runner.os }}-composer-${{ hashFiles('composer.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-composer-
+
+      - name: Install PHP dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Prepare Laravel environment
+        run: |
+          cp .env.example .env
+          php artisan key:generate --force
+
+      - name: Setup Node for MariaDB feature tests
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Build frontend for MariaDB feature tests
+        run: |
+          npm ci
+          npm run build
+
+      - name: Verify MariaDB migrations
+        run: php artisan migrate --force
+
+      - name: Run focused database-sensitive regression tests
+        run: >-
+          php artisan test
+          tests/Feature/PublicFormsTest.php
+          tests/Feature/DatabaseIntegrityAuditTest.php
+          tests/Feature/Operations/QueueRuntimeTest.php
+          tests/Feature/DomainRetirementMigrationTest.php
+          tests/Feature/CanonicalIssuedInvoiceSchemaTest.php
+          tests/Feature/ProductCostAllocationHistoryTest.php
+          tests/Feature/PaymentAllocationServiceTest.php
+          tests/Feature/ProfitabilityCalculationServiceTest.php
+          tests/Feature/PayrollPeriodLifecycleTest.php
+          tests/Feature/GoogleAdsRefreshRecoveryTest.php
+          tests/Feature/McpOperationsToolsTest.php
+          tests/Feature/MarketDataImportAdaptersTest.php
+          tests/Feature/MarketTrendTest.php
 
   frontend:
     name: Frontend build and dependency audit

@@ -21,7 +21,7 @@ return new class extends Migration
             $table->unique(['legal_entity_id', 'environment'], 'invoice_submission_oauth_credentials_entity_env_unique');
         });
 
-        if (DB::getDriverName() === 'mysql') {
+        if (in_array(DB::getDriverName(), ['mysql', 'mariadb'], true)) {
             DB::statement("ALTER TABLE invoice_submission_oauth_credentials ADD CONSTRAINT invoice_submission_oauth_credentials_environment_check CHECK (environment IN ('test', 'production'))");
         }
     }

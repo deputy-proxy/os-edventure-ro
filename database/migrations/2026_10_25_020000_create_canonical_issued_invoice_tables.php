@@ -213,7 +213,7 @@ return new class extends Migration
             $table->index(['transmission_state', 'updated_at'], 'invoice_submissions_state_updated_index');
         });
 
-        if (DB::getDriverName() === 'mysql') {
+        if (in_array(DB::getDriverName(), ['mysql', 'mariadb'], true)) {
             DB::statement("ALTER TABLE issued_invoices ADD CONSTRAINT issued_invoices_document_type_check CHECK (document_type IN ('invoice', 'credit_note', 'debit_note'))");
             DB::statement("ALTER TABLE issued_invoices ADD CONSTRAINT issued_invoices_document_status_check CHECK (document_status IN ('draft', 'approved', 'issued', 'cancelled', 'corrected'))");
             DB::statement("ALTER TABLE issued_invoice_parties ADD CONSTRAINT issued_invoice_parties_role_check CHECK (role IN ('seller', 'buyer'))");
@@ -244,7 +244,7 @@ return new class extends Migration
             $table->index(['transport_result', 'request_started_at'], 'invoice_submission_attempts_result_started_index');
         });
 
-        if (DB::getDriverName() === 'mysql') {
+        if (in_array(DB::getDriverName(), ['mysql', 'mariadb'], true)) {
             DB::statement('ALTER TABLE issued_invoice_lines ADD CONSTRAINT issued_invoice_lines_number_check CHECK (line_number > 0)');
             DB::statement('ALTER TABLE issued_invoice_lines ADD CONSTRAINT issued_invoice_lines_discount_check CHECK (discount_amount >= 0)');
             DB::statement('ALTER TABLE invoice_submission_attempts ADD CONSTRAINT invoice_submission_attempts_number_check CHECK (attempt_number > 0)');
