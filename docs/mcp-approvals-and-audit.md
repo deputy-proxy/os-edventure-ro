@@ -90,6 +90,10 @@ For an MCP incident:
 5. Record the incident decision and any manual reconciliation in the relevant domain incident/change record. Preserve the MCP approval and audit rows.
 6. Restore permissions or reauthorize the connector only after containment and review are complete.
 
+## Issue #588 privacy and staging readiness
+
+The domain-owner approval matrix, unresolved MCP audit retention decision, isolated-staging acceptance protocol, evidence fields and release gate are tracked in [MCP privacy approvals and controlled-write staging record](mcp-readiness-issue-588.md). Automated feature coverage does not substitute for staging execution or independent reviewer sign-off. Production controlled writes remain disabled until the separate project-owner decision is recorded.
+
 ## Validation
 
 The feature tests cover encrypted payload persistence, canonical hash stability, idempotency collisions, payload tampering, independent human review, AI self-approval denial, known initiator separation, rejection, cancellation, expiry, permission revocation immediately before execution, concurrent claims, uncertain outcomes, stale recovery, immutable audit history, and the Filament review pages. The MCP authorization tests also assert success and denied invocation audit records.
