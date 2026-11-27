@@ -15,6 +15,7 @@ use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 use Laravel\Passport\Passport;
 use LogicException;
@@ -378,11 +379,12 @@ final class McpApprovalWorkflowTest extends TestCase
         $service = app(McpApprovalService::class);
         $approval = $service->approve($this->requestApproval($principal), $reviewer, 'Approved for execution.');
         $calls = 0;
+        Log::spy();
 
         try {
             $service->executeApproved($approval, $principal, function () use (&$calls): array {
                 $calls++;
-                throw new RuntimeException('Simulated unconfirmed domain outcome.');
+                throw new RuntimeException('Sensitive simulated exception message must not be logged.');
             });
             $this->fail('An unconfirmed execution outcome must not be reported as successful.');
         } catch (ValidationException $exception) {
@@ -390,6 +392,19 @@ final class McpApprovalWorkflowTest extends TestCase
         }
 
         $this->assertSame(1, $calls);
+        Log::shouldHaveReceived('error')->once()->withArgs(function (string $message, array $context) use ($approval): bool {
+            $encodedContext = json_encode($context);
+
+            return $message === 'MCP approved execution failed with an uncertain outcome.'
+                && $context['approval_id'] === $approval->id
+                && $context['execution_audit_id'] === $approval->fresh()->execution_audit_id
+                && $context['request_id'] === 'mcp-request-test-default'
+                && $context['tool_name'] === 'create_task'
+                && $context['exception_class'] === RuntimeException::class
+                && $context['exception_file'] === 'McpApprovalWorkflowTest.php'
+                && is_int($context['exception_line'] ?? null)
+                && ! str_contains((string) $encodedContext, 'Sensitive simulated exception message must not be logged.');
+        });
         $this->assertSame(McpApproval::STATUS_EXECUTION_UNCERTAIN, $approval->fresh()->status);
         $this->assertDatabaseHas('mcp_execution_audits', [
             'event_type' => 'approved_operation_execution',
