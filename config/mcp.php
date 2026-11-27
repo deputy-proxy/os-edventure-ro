@@ -655,5 +655,6 @@ return [
     'direct_write_max_payload_bytes' => (int) env('MCP_DIRECT_WRITE_MAX_PAYLOAD_BYTES', 65536),
     'direct_write_max_result_bytes' => (int) env('MCP_DIRECT_WRITE_MAX_RESULT_BYTES', 65536),
     'direct_write_stale_minutes' => (int) env('MCP_DIRECT_WRITE_STALE_MINUTES', 5),
+    'audit_retention_days' => (int) env('MCP_AUDIT_RETENTION_DAYS', 365),
     'execution_stale_minutes' => (int) env('MCP_EXECUTION_STALE_MINUTES', 5),
 ];

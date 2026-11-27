@@ -8,6 +8,7 @@ use App\Models\Mcp\McpDirectWriteExecution;
 use App\Models\Mcp\McpExecutionAudit;
 use App\Models\User;
 use App\Services\Mcp\McpDirectWriteService;
+use App\Services\Mcp\McpPayloadCanonicalizer;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -122,6 +123,51 @@ final class McpDirectWriteServiceTest extends TestCase
             $this->assertArrayHasKey('idempotency_key', $exception->errors());
         }
 
+        $this->assertDatabaseCount('mcp_direct_write_executions', 1);
+    }
+
+    public function test_in_flight_claim_blocks_a_duplicate_submission_before_validation_or_execution(): void
+    {
+        $principal = User::factory()->create();
+        $clientId = (string) Str::uuid();
+        request()->attributes->set('oauth_client_id', $clientId);
+        $arguments = ['value' => 'still running', 'idempotency_key' => 'direct-write-concurrent-claim-1'];
+        $hash = app(McpPayloadCanonicalizer::class)
+            ->hash('create_task', (string) config('mcp.permission_matrix_version'), null, null, $arguments);
+
+        McpDirectWriteExecution::query()->create([
+            'ai_principal_id' => $principal->getKey(),
+            'oauth_client_id' => $clientId,
+            'tool_name' => 'create_task',
+            'tool_version' => (string) config('mcp.permission_matrix_version'),
+            'idempotency_key' => $arguments['idempotency_key'],
+            'payload_hash' => $hash,
+            'status' => 'executing',
+            'started_at' => now(),
+        ]);
+
+        $calls = 0;
+
+        try {
+            app(McpDirectWriteService::class)->execute(
+                $principal,
+                $this->permission(),
+                $arguments,
+                static function () use (&$calls): void {
+                    $calls++;
+                },
+                static function () use (&$calls): array {
+                    $calls++;
+
+                    return ['record_id' => 42];
+                },
+            );
+            $this->fail('A duplicate submission must not run while the original claim is in flight.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('execution', $exception->errors());
+        }
+
+        $this->assertSame(0, $calls);
         $this->assertDatabaseCount('mcp_direct_write_executions', 1);
     }
 
@@ -278,6 +324,10 @@ final class McpDirectWriteServiceTest extends TestCase
         $this->assertDatabaseHas('mcp_execution_audits', [
             'event_type' => 'direct_write_execution',
             'status' => 'succeeded',
+            'ai_principal_id' => $principal->getKey(),
+            'oauth_client_id' => request()->attributes->get('oauth_client_id'),
+            'request_id' => 'direct-write-test-request',
+            'tool_name' => 'create_task',
         ]);
     }
 
