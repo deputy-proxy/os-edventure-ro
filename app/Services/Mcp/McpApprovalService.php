@@ -12,6 +12,7 @@ use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use JsonException;
@@ -403,6 +404,7 @@ final class McpApprovalService
                 'audit_id' => $execution->getKey(),
                 'arguments' => (array) $locked->arguments,
                 'tool_name' => $locked->tool_name,
+                'request_id' => $locked->request_id,
             ];
         });
 
@@ -459,7 +461,19 @@ final class McpApprovalService
             throw ValidationException::withMessages([
                 'execution' => 'The approved operation is no longer valid and was not executed. Review the current record and request a new approval.',
             ]);
-        } catch (Throwable) {
+        } catch (Throwable $exception) {
+            // Keep diagnostics useful without persisting exception messages, payloads,
+            // credentials, or stack traces that may contain sensitive application data.
+            Log::error('MCP approved execution failed with an uncertain outcome.', [
+                'approval_id' => $claim['approval_id'],
+                'execution_audit_id' => $claim['audit_id'],
+                'request_id' => $claim['request_id'],
+                'tool_name' => $claim['tool_name'],
+                'exception_class' => $exception::class,
+                'exception_file' => basename($exception->getFile()),
+                'exception_line' => $exception->getLine(),
+            ]);
+
             $this->finishFailedExecution($claim, false, 'execution_outcome_uncertain');
 
             throw ValidationException::withMessages([
