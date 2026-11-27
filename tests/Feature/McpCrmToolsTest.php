@@ -79,42 +79,24 @@ class McpCrmToolsTest extends TestCase
         parent::tearDown();
     }
 
-    public function test_crm_tools_include_read_tools_and_approval_gated_writes_with_closed_schemas(): void
+    public function test_crm_tools_include_read_tools_and_direct_writes_with_closed_schemas(): void
     {
-        $this->grant(['customer.index', 'customer_contract.index', 'customer_interaction.index', 'customer_lead.index', 'finance-unit-economics.view']);
 
-        $tools = $this->mcpPost([
-            'jsonrpc' => '2.0', 'id' => 2, 'method' => 'tools/list', 'params' => new \stdClass,
-        ], $this->initialize())->assertOk()->json('result.tools');
-
-        $expected = [
-            'search_customers',
-            'get_customer_details',
-            'get_customer_contracts',
-            'get_customer_interactions',
-            'get_sales_pipeline',
-            'get_lead_details',
-            'get_customer_economics',
-            'create_customer_interaction', 'create_customer_lead',
-            'execute_create_customer_interaction', 'execute_create_customer_lead',
-        ];
+        $this->grant(['customer.index', 'customer_contract.index', 'customer_interaction.index', 'customer_lead.index', 'finance-unit-economics.view', 'customer_interaction.create', 'customer_lead.create']);
+        $tools = $this->mcpPost(['jsonrpc' => '2.0', 'id' => 2, 'method' => 'tools/list', 'params' => new \stdClass], $this->initialize())->assertOk()->json('result.tools');
+        $expected = ['search_customers', 'get_customer_details', 'get_customer_contracts', 'get_customer_interactions', 'get_sales_pipeline', 'get_lead_details', 'get_customer_economics', 'create_customer_interaction', 'create_customer_lead'];
         $this->assertEqualsCanonicalizing($expected, array_column($tools, 'name'));
         foreach ($tools as $tool) {
             $this->assertFalse($tool['inputSchema']['additionalProperties'] ?? true);
             $permission = (new McpToolPermissionRegistry)->forTool($tool['name']);
-            if ($permission->operationType === 'read') {
+            if ($permission->operationType === 'write') {
+                $this->assertSame('direct', $permission->executionMode);
                 $this->assertFalse($permission->requiresApproval);
-            } else {
-                $this->assertSame('write', $permission->operationType);
-                $this->assertTrue($permission->requiresApproval);
+                $this->assertContains('idempotency_key', $tool['inputSchema']['required']);
             }
         }
 
-        $search = collect($tools)->firstWhere('name', 'search_customers');
-        $this->assertSame(100, $search['inputSchema']['properties']['limit']['maximum']);
-        $this->assertSame(['query'], $search['inputSchema']['required']);
     }
-
     public function test_customer_search_filters_paginates_and_omits_personal_identifiers(): void
     {
         $this->grant(['customer.index']);
@@ -328,91 +310,28 @@ class McpCrmToolsTest extends TestCase
         app(McpAuthorizationService::class)->authorizePrincipalForTool($this->principal, $permission);
     }
 
-    public function test_customer_interaction_and_lead_writes_require_human_approval(): void
+    public function test_customer_interaction_and_lead_writes_execute_directly(): void
     {
+
         $this->grant(['customer.index', 'customer_interaction.create', 'customer_lead.create']);
         $customer = Customer::factory()->create();
         $session = $this->initialize();
-        $reviewer = $this->reviewer();
+        $interactionArgs = ['customer_id' => $customer->getKey(), 'initiator' => 'Customer', 'reason' => 'Product Inquiry', 'description' => 'Asked about next cohort.', 'timestamp' => '2026-11-22T10:00:00+02:00', 'interaction_rating' => 5, 'idempotency_key' => 'crm-interaction-direct-1'];
+        $interaction = $this->callTool('create_customer_interaction', $interactionArgs, $session)->assertOk()->json('result.structuredContent');
+        $this->assertDatabaseHas('customer_interactions', ['id' => $interaction['interaction_id'], 'customer_id' => $customer->getKey(), 'reason' => 'Product Inquiry', 'interaction_rating' => 5]);
+        $this->assertArrayNotHasKey('description', $interaction);
+        $this->assertSame($interaction, $this->callTool('create_customer_interaction', $interactionArgs, $session)->assertOk()->json('result.structuredContent'));
+        $this->assertDatabaseCount('customer_interactions', 1);
 
-        $interactionArguments = [
-            'customer_id' => $customer->getKey(),
-            'initiator' => 'Customer',
-            'reason' => 'Product Inquiry',
-            'description' => 'Asked for details about the next cohort.',
-            'timestamp' => '2026-11-22T10:00:00+02:00',
-            'interaction_rating' => 5,
-            'idempotency_key' => 'crm-interaction-next-cohort',
-        ];
-        $interactionRequest = $this->callTool('create_customer_interaction', $interactionArguments, $session)
-            ->assertOk()->json('result.structuredContent');
-        $interactionApproval = McpApproval::query()->findOrFail($interactionRequest['approval_id']);
-        $this->assertSame(McpApproval::STATUS_PENDING, $interactionApproval->status);
-        $this->assertDatabaseCount('customer_interactions', 0);
-        $this->assertArrayNotHasKey('description', (array) $interactionApproval->preview);
-        app(McpApprovalService::class)->approve($interactionApproval, $reviewer, 'Reviewed the customer interaction.');
-
-        $interactionResult = $this->callTool('execute_create_customer_interaction', [
-            'approval_id' => $interactionApproval->getKey(),
-        ], $session)->assertOk()->json('result.structuredContent');
-        $this->assertDatabaseHas('customer_interactions', [
-            'id' => $interactionResult['interaction_id'],
-            'customer_id' => $customer->getKey(),
-            'reason' => 'Product Inquiry',
-            'interaction_rating' => 5,
-        ]);
-        $this->assertArrayNotHasKey('description', $interactionResult);
-
-        $leadArguments = [
-            'first_name' => 'Morgan',
-            'middle_name' => 'A.',
-            'last_name' => 'Example',
-            'email' => 'morgan.example@example.test',
-            'phone' => '+40 700 000 001',
-            'source' => 'Partner referral',
-            'source_category' => 'partner',
-            'referral_partner' => 'Example Partner',
-            'topic_interest' => 'Leadership',
-            'product_interest' => 'Executive programme',
-            'last_contacted_at' => '2026-11-22T10:30:00+02:00',
-            'idempotency_key' => 'crm-lead-morgan-example',
-        ];
-        $leadRequest = $this->callTool('create_customer_lead', $leadArguments, $session)
-            ->assertOk()->json('result.structuredContent');
-        $leadApproval = McpApproval::query()->findOrFail($leadRequest['approval_id']);
-        $this->assertSame(McpApproval::STATUS_PENDING, $leadApproval->status);
-        $this->assertDatabaseCount('customer_leads', 0);
-        $this->assertArrayNotHasKey('email', (array) $leadApproval->preview);
-        $this->assertArrayNotHasKey('phone', (array) $leadApproval->preview);
-        $previewJson = json_encode($leadApproval->preview, JSON_THROW_ON_ERROR);
-        $this->assertStringNotContainsString($leadArguments['email'], $previewJson);
-        $this->assertStringNotContainsString($leadArguments['phone'], $previewJson);
-        app(McpApprovalService::class)->approve($leadApproval, $reviewer, 'Reviewed the customer lead and contact details.');
-
-        $leadResult = $this->callTool('execute_create_customer_lead', [
-            'approval_id' => $leadApproval->getKey(),
-        ], $session)->assertOk()->json('result.structuredContent');
-        $this->assertDatabaseHas('customer_leads', [
-            'id' => $leadResult['lead_id'],
-            'email' => 'morgan.example@example.test',
-            'status' => 'new',
-            'source_category' => 'partner',
-        ]);
-        $this->assertArrayNotHasKey('email', $leadResult);
-        $this->assertArrayNotHasKey('phone', $leadResult);
-        $duplicateLeadRequest = $this->callTool('create_customer_lead', $leadArguments, $session)
-            ->assertOk()->json('result.structuredContent');
-        $this->assertSame($leadApproval->getKey(), $duplicateLeadRequest['approval_id']);
+        $leadArgs = ['first_name' => 'Morgan', 'middle_name' => 'A.', 'last_name' => 'Example', 'email' => 'morgan.example@example.test', 'phone' => '+40 700 000 001', 'source' => 'Partner referral', 'source_category' => 'partner', 'referral_partner' => 'Example Partner', 'topic_interest' => 'Leadership', 'product_interest' => 'Executive programme', 'last_contacted_at' => '2026-11-22T10:30:00+02:00', 'idempotency_key' => 'crm-lead-direct-1'];
+        $lead = $this->callTool('create_customer_lead', $leadArgs, $session)->assertOk()->json('result.structuredContent');
+        $this->assertDatabaseHas('customer_leads', ['id' => $lead['lead_id'], 'status' => 'new']);
+        $this->assertArrayNotHasKey('email', $lead);
+        $this->assertSame($lead, $this->callTool('create_customer_lead', $leadArgs, $session)->assertOk()->json('result.structuredContent'));
         $this->assertDatabaseCount('customer_leads', 1);
+        $this->assertSame(0, McpApproval::query()->count());
 
-        $listedNames = array_column($this->mcpPost([
-            'jsonrpc' => '2.0', 'id' => 3, 'method' => 'tools/list', 'params' => new \stdClass,
-        ], $session)->assertOk()->json('result.tools'), 'name');
-        $this->assertNotContains('convert_customer_lead', $listedNames);
-        $this->assertNotContains('create_customer_invoice', $listedNames);
-        $this->assertNotContains('execute_convert_customer_lead', $listedNames);
     }
-
     private function reviewer(): User
     {
         $reviewer = User::factory()->create(['name' => 'MCP CRM Reviewer']);

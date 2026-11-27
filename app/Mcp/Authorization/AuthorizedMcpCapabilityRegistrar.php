@@ -22,6 +22,8 @@ use Throwable;
 
 abstract class AuthorizedMcpCapabilityRegistrar implements McpCapabilityRegistrar
 {
+    /** @var array<string, array{previewFactory: callable, description: string, inputSchema: array<string, mixed>}> */
+    private array $pendingDirectWrites = [];
     public function __construct(
         protected readonly McpToolPermissionRegistry $permissions,
         protected readonly McpAuthorizationService $authorization,
@@ -45,7 +47,7 @@ abstract class AuthorizedMcpCapabilityRegistrar implements McpCapabilityRegistra
         $permission = $this->permissions->forTool($toolName);
 
         if ($permission->operationType !== 'read') {
-            throw new LogicException('Write tools cannot use addAuthorizedTool(); use the human-approval request boundary.');
+            throw new LogicException('Write tools cannot use addAuthorizedTool(); use addDirectWriteTool() or the legacy approval boundary.');
         }
 
         $builder->addTool(
@@ -54,6 +56,49 @@ abstract class AuthorizedMcpCapabilityRegistrar implements McpCapabilityRegistra
             description: $description,
             inputSchema: $inputSchema,
         );
+    }
+
+    /**
+     * Define the validation boundary for a direct write. The paired executor registration
+     * below completes the MCP SDK registration; only the final one-call tool is published.
+     *
+     * @param callable(User, array<string, mixed>): array<string, mixed> $validator
+     * @param array<string, mixed> $inputSchema
+     */
+    protected function addDirectWriteDefinition(
+        Builder $builder,
+        string $toolName,
+        callable $validator,
+        string $description,
+        array $inputSchema,
+    ): void {
+        $permission = $this->permissions->forTool($toolName);
+        if ($permission->operationType !== 'write' || $permission->executionMode !== 'direct') {
+            throw new LogicException('Direct-write definitions require execution_mode=direct.');
+        }
+
+        $this->pendingDirectWrites[$toolName] = [
+            'previewFactory' => $validator,
+            'description' => $description,
+            'inputSchema' => $inputSchema,
+        ];
+    }
+
+    /**
+     * Complete a direct-write definition with its domain executor and publish one MCP tool.
+     *
+     * @param callable(User, array<string, mixed>): array<string, mixed> $executor
+     * @param array<string, mixed> $inputSchema
+     */
+    protected function addDirectWriteExecutor(
+        Builder $builder,
+        string $toolName,
+        string $directWriteToolName,
+        callable $executor,
+        string $description,
+        array $inputSchema,
+    ): void {
+        $this->addApprovedExecutionTool($builder, $toolName, $directWriteToolName, $executor, $description, $inputSchema);
     }
 
     /**
@@ -74,6 +119,16 @@ abstract class AuthorizedMcpCapabilityRegistrar implements McpCapabilityRegistra
         array $inputSchema,
     ): void {
         $permission = $this->permissions->forTool($toolName);
+
+        if ($permission->operationType === 'write' && $permission->executionMode === 'direct') {
+            $this->pendingDirectWrites[$toolName] = [
+                'previewFactory' => $previewFactory,
+                'description' => $description,
+                'inputSchema' => $inputSchema,
+            ];
+
+            return;
+        }
 
         if ($permission->operationType !== 'write' || ! $permission->requiresApproval) {
             throw new LogicException('Approval request tools require an explicit write permission with requires_approval enabled.');
@@ -162,8 +217,36 @@ abstract class AuthorizedMcpCapabilityRegistrar implements McpCapabilityRegistra
         string $description,
         array $inputSchema,
     ): void {
-        $permission = $this->permissions->forTool($toolName);
         $approvedPermission = $this->permissions->forTool($approvedOperationToolName);
+
+        if ($approvedPermission->operationType === 'write' && $approvedPermission->executionMode === 'direct') {
+            $definition = $this->pendingDirectWrites[$approvedOperationToolName] ?? null;
+            if (! is_array($definition) || ! is_callable($definition['previewFactory'])) {
+                throw new LogicException("Direct write [{$approvedOperationToolName}] must define its validator before its executor.");
+            }
+
+            $properties = $definition['inputSchema']['properties'] ?? null;
+            if (is_object($properties)) $properties = (array) $properties;
+            $required = $definition['inputSchema']['required'] ?? null;
+            if (! is_array($properties) || ! array_key_exists('idempotency_key', $properties)
+                || ! is_array($required) || ! in_array('idempotency_key', $required, true)) {
+                throw new LogicException('Direct write tools must require an idempotency_key argument.');
+            }
+
+            $this->addDirectWriteTool(
+                $builder,
+                $approvedPermission,
+                $definition['previewFactory'],
+                $executor,
+                $description,
+                $definition['inputSchema'],
+            );
+            unset($this->pendingDirectWrites[$approvedOperationToolName]);
+
+            return;
+        }
+
+        $permission = $this->permissions->forTool($toolName);
 
         if ($permission->operationType !== 'write' || ! $permission->requiresApproval
             || $approvedPermission->operationType !== 'write' || ! $approvedPermission->requiresApproval) {
@@ -209,6 +292,52 @@ abstract class AuthorizedMcpCapabilityRegistrar implements McpCapabilityRegistra
 
             return $approvalService->executeApproved($approval, $principal, $executor);
         };
+
+        $builder->addTool(
+            handler: $this->wrapAuthorizedHandler($permission, $handler),
+            name: $permission->toolName,
+            description: $description,
+            inputSchema: $inputSchema,
+        );
+    }
+
+
+    /**
+     * Register one autonomous write call with current authorization, validation,
+     * idempotency, transaction, audit and output-filtering controls.
+     *
+     * @param callable(User, array<string, mixed>): mixed $validator
+     * @param callable(User, array<string, mixed>): array<string, mixed> $executor
+     * @param array<string, mixed> $inputSchema
+     */
+    protected function addDirectWriteTool(
+        Builder $builder,
+        McpToolPermission $permission,
+        callable $validator,
+        callable $executor,
+        string $description,
+        array $inputSchema,
+    ): void {
+        if ($permission->operationType !== 'write' || $permission->executionMode !== 'direct' || $permission->requiresApproval) {
+            throw new LogicException('Direct-write registration requires an explicitly autonomous write permission.');
+        }
+
+        $properties = $inputSchema['properties'] ?? null;
+        if (is_object($properties)) $properties = (array) $properties;
+        $required = $inputSchema['required'] ?? null;
+        if (! is_array($properties) || ! array_key_exists('idempotency_key', $properties)
+            || ! is_array($required) || ! in_array('idempotency_key', $required, true)) {
+            throw new LogicException('Direct-write tools must require an idempotency_key argument.');
+        }
+
+        $service = app(\App\Services\Mcp\McpDirectWriteService::class);
+        $handler = static fn (User $principal, array $arguments): array => $service->execute(
+            $principal,
+            $permission,
+            $arguments,
+            static fn () => $validator($principal, $arguments),
+            static fn (): array => $executor($principal, $arguments),
+        );
 
         $builder->addTool(
             handler: $this->wrapAuthorizedHandler($permission, $handler),

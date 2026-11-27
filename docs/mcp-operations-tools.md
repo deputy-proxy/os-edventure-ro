@@ -1,10 +1,10 @@
 # MCP operations tools
 
 **Issues:** #536 (read tools), #537 (controlled writes)
-**Release:** 2 read-only management intelligence and 3.1 approval-gated task actions
-**Permission matrix:** 1.5.0
+**Release:** 2 read-only management intelligence and 3.2 autonomous task writes
+**Permission matrix:** 1.8.0
 
-The operations registrar exposes eight read-only tools and four approval-gated task operations (eight request/execution tools). Each tool uses current HexaLite permissions and the record scope declared in config/mcp.php. Lists and searches apply record visibility before filters, counts and bounded database pagination.
+The operations registrar exposes eight read-only tools and four autonomous direct-write task operations (one tool per operation). Each tool uses current HexaLite permissions and the record scope declared in config/mcp.php. Lists and searches apply record visibility before filters, counts and bounded database pagination.
 
 ## Tool catalogue
 
@@ -28,18 +28,18 @@ All schemas reject additional properties. Page size is bounded to 100 rows and o
 - Both overdue-task results and operational bottlenecks reuse TasksAndProjectsData. The service owns the shared overdue definition and supports bounded result pagination; its task query is pre-scoped by McpTaskRecordScope before task totals, status counts, overdue counts and assignee workload are aggregated. Project schedule metrics are included only with project.index; phase metrics additionally require project_phase.index. Assignee IDs are not returned.
 - Quarterly objectives return objective text, quarter, status, creation timestamp and employee display name. Employee IDs and free-text descriptions are excluded. The dedicated quarterly_objective.index permission is required.
 - Meeting results return subject, type, status, start/end, location, organizer display name and participant count. Descriptions and participant identities are excluded.
-- The eight read tools do not create or update projects, phases, tasks, objectives or meetings. The controlled task operations below can create, update, assign and complete tasks only after independent human approval.
+- The eight read tools do not create or update projects, phases, tasks, objectives or meetings. The four direct task operations below can create, update, assign and complete tasks in one call while preserving existing domain authorization and assignment policies.
 
-## Controlled task operations (#537)
+## Direct task writes (#537)
 
 | Operation | Request tool | Execution tool | Required permissions |
 | --- | --- | --- | --- |
-| Create task | `create_task` | `execute_create_task` | task.create, project.index, project_phase.index |
-| Update task | `update_task` | `execute_update_task` | task.update |
-| Assign task | `assign_task` | `execute_assign_task` | task.update, task.assign |
-| Complete task | `complete_task` | `execute_complete_task` | task.update |
+| Create task | `create_task` | One-call direct write | task.create, project.index, project_phase.index |
+| Update task | `update_task` | One-call direct write | task.update |
+| Assign task | `assign_task` | One-call direct write | task.update, task.assign |
+| Complete task | `complete_task` | One-call direct write | task.update |
 
-Every request requires an idempotency key and creates a pending approval; it does not mutate the task. Execution accepts only the original approval ID and uses the encrypted approved payload. Update, assignment and completion also require the task's `expected_updated_at` value. A stale version is blocked rather than overwriting a concurrent human change.
+Each tool requires an idempotency_key and executes the domain action in the same MCP call. A matching completed retry returns the original result; reusing a key with a different payload is rejected. Update, assignment and completion also require the task's `expected_updated_at` value. A stale version is blocked rather than overwriting a concurrent human change.
 
 `update_task` may change action, description, due date, estimated effort, and status only between `pending` and `in_progress`. It cannot change project/phase or assignee; assignment has its own tool. `complete_task` is the only MCP operation that sets status to `done`. Task creation requires an existing project and a phase belonging to that project; it defaults to pending and assigns to the AI principal unless a permitted eligible assignee is supplied. Without `task.view_all`, reassignment follows the existing eligible-role list (Academician, Teacher, Marketer, Coordinator). No task deletion or dependency editing is exposed.
 
@@ -61,4 +61,5 @@ The task record scope mirrors the task resource's own/all visibility rule: task.
 
 Project, project-phase, meeting and quarterly-objective tools use their respective existing index permissions. Optional permissions only add the related data described above; they do not widen the required tool permission. The AI principal receives no permissions automatically.
 
-See MCP permission matrix, MCP server and MCP integration plan for transport, identity and approval boundaries.
+See MCP permission matrix, MCP server and MCP integration plan for transport, identity and execution boundaries.
+All four task writes execute in one MCP call and require `idempotency_key`. Matching completed retries return the original result; payload collisions and uncertain/in-progress replays are rejected. Existing task workflow authorization, assignment eligibility, record visibility and optimistic version checks remain in force.

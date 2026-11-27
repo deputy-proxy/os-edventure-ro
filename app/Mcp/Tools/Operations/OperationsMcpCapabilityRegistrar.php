@@ -56,7 +56,7 @@ final class OperationsMcpCapabilityRegistrar extends AuthorizedMcpCapabilityRegi
 
     private function registerTaskWriteTools(McpBuilder $builder, TaskWorkflow $workflow): void
     {
-        $this->addApprovalRequestTool(
+        $this->addDirectWriteDefinition(
             $builder,
             'create_task',
             function (User $user, array $arguments) use ($workflow): array {
@@ -81,7 +81,7 @@ final class OperationsMcpCapabilityRegistrar extends AuthorizedMcpCapabilityRegi
             $this->schema('create_task'),
         );
 
-        $this->addApprovalRequestTool(
+        $this->addDirectWriteDefinition(
             $builder,
             'update_task',
             function (User $user, array $arguments) use ($workflow): array {
@@ -109,7 +109,7 @@ final class OperationsMcpCapabilityRegistrar extends AuthorizedMcpCapabilityRegi
             $this->schema('update_task'),
         );
 
-        $this->addApprovalRequestTool(
+        $this->addDirectWriteDefinition(
             $builder,
             'assign_task',
             function (User $user, array $arguments) use ($workflow): array {
@@ -133,7 +133,7 @@ final class OperationsMcpCapabilityRegistrar extends AuthorizedMcpCapabilityRegi
             $this->schema('assign_task'),
         );
 
-        $this->addApprovalRequestTool(
+        $this->addDirectWriteDefinition(
             $builder,
             'complete_task',
             function (User $user, array $arguments) use ($workflow): array {
@@ -157,7 +157,7 @@ final class OperationsMcpCapabilityRegistrar extends AuthorizedMcpCapabilityRegi
             $this->schema('complete_task'),
         );
 
-        $this->addApprovedExecutionTool(
+        $this->addDirectWriteExecutor(
             $builder,
             'execute_create_task',
             'create_task',
@@ -166,11 +166,11 @@ final class OperationsMcpCapabilityRegistrar extends AuthorizedMcpCapabilityRegi
                     return $this->taskExecutionResult($workflow->create(Arr::except($arguments, ['idempotency_key'])));
                 });
             },
-            'Executes an approved task creation using its immutable approved payload.',
+            'Creates a task in one call through the authorized task workflow. Requires an idempotency key.',
             $this->schema('execute_create_task'),
         );
 
-        $this->addApprovedExecutionTool(
+        $this->addDirectWriteExecutor(
             $builder,
             'execute_update_task',
             'update_task',
@@ -179,11 +179,11 @@ final class OperationsMcpCapabilityRegistrar extends AuthorizedMcpCapabilityRegi
                     return $this->taskExecutionResult($workflow->update(Arr::except($arguments, ['idempotency_key'])));
                 });
             },
-            'Executes an approved allowlisted task update using its immutable approved payload.',
+            'Updates an authorized task in one call. The expected task version must still match.',
             $this->schema('execute_update_task'),
         );
 
-        $this->addApprovedExecutionTool(
+        $this->addDirectWriteExecutor(
             $builder,
             'execute_assign_task',
             'assign_task',
@@ -192,11 +192,11 @@ final class OperationsMcpCapabilityRegistrar extends AuthorizedMcpCapabilityRegi
                     return $this->taskExecutionResult($workflow->assign(Arr::except($arguments, ['idempotency_key'])));
                 });
             },
-            'Executes an approved task assignment using its immutable approved payload.',
+            'Assigns an authorized task in one call under the existing assignment policy.',
             $this->schema('execute_assign_task'),
         );
 
-        $this->addApprovedExecutionTool(
+        $this->addDirectWriteExecutor(
             $builder,
             'execute_complete_task',
             'complete_task',
@@ -205,7 +205,7 @@ final class OperationsMcpCapabilityRegistrar extends AuthorizedMcpCapabilityRegi
                     return $this->taskExecutionResult($workflow->complete(Arr::except($arguments, ['idempotency_key'])));
                 });
             },
-            'Executes an approved task completion using its immutable approved payload.',
+            'Completes an authorized task in one call after checking its current version.',
             $this->schema('execute_complete_task'),
         );
     }

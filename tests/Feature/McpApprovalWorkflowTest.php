@@ -482,7 +482,7 @@ final class McpApprovalWorkflowTest extends TestCase
 
     public function test_approval_service_rejects_tools_not_marked_as_approval_required_writes(): void
     {
-        config(['mcp.tool_permissions.create_task.operation_type' => 'read', 'mcp.tool_permissions.create_task.requires_approval' => false]);
+        config(['mcp.tool_permissions.create_task.operation_type' => 'read', 'mcp.tool_permissions.create_task.requires_approval' => false, 'mcp.tool_permissions.create_task.execution_mode' => 'none']);
         $principal = $this->principal();
         Passport::actingAs($principal, ['mcp:use', 'mcp.operations.tasks.write']);
 

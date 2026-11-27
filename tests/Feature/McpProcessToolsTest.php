@@ -77,33 +77,24 @@ final class McpProcessToolsTest extends TestCase
         parent::tearDown();
     }
 
-    public function test_process_tools_are_registered_with_closed_schemas_and_approval_boundaries(): void
+    public function test_process_tools_are_registered_with_closed_schemas_and_direct_write_boundaries(): void
     {
-        $this->grant(['process.index', 'process.create', 'process.update', 'process.delete', 'task.index']);
 
-        $tools = $this->mcpPost([
-            'jsonrpc' => '2.0',
-            'id' => 2,
-            'method' => 'tools/list',
-            'params' => new \stdClass,
-        ], $this->initialize())->assertOk()->json('result.tools');
-
-        $expected = [
-            'get_processes', 'get_process_details', 'get_process_steps', 'get_process_tasks',
-            'create_process', 'update_process', 'delete_process',
-            'execute_create_process', 'execute_update_process', 'execute_delete_process',
-        ];
+        $this->grant(['process.index', 'process.create', 'process.update', 'process.delete']);
+        $tools = $this->mcpPost(['jsonrpc' => '2.0', 'id' => 2, 'method' => 'tools/list', 'params' => new \stdClass], $this->initialize())->assertOk()->json('result.tools');
+        $expected = ['get_processes', 'get_process_details', 'get_process_steps', 'get_process_tasks', 'create_process', 'update_process', 'delete_process'];
         $this->assertEqualsCanonicalizing($expected, array_column($tools, 'name'));
-
         foreach ($tools as $tool) {
             $this->assertFalse($tool['inputSchema']['additionalProperties'] ?? true);
             $permission = (new McpToolPermissionRegistry)->forTool($tool['name']);
             if ($permission->operationType === 'write') {
-                $this->assertTrue($permission->requiresApproval);
+                $this->assertSame('direct', $permission->executionMode);
+                $this->assertFalse($permission->requiresApproval);
+                $this->assertContains('idempotency_key', $tool['inputSchema']['required']);
             }
         }
-    }
 
+    }
     public function test_process_tools_reject_a_different_authenticated_principal(): void
     {
         $this->grant(['process.index']);
@@ -247,168 +238,59 @@ final class McpProcessToolsTest extends TestCase
         $this->assertNotSame($visibleTask->getKey(), $hiddenTask->getKey());
     }
 
-    public function test_process_writes_require_independent_approval_and_use_immutable_payloads(): void
+    public function test_process_writes_execute_directly_with_idempotent_replay(): void
     {
+
         $role = $this->grant(['process.index', 'process.create', 'process.update', 'process.delete']);
         $employee = Employee::factory()->create();
-        $secondEmployee = Employee::factory()->create();
+        $second = Employee::factory()->create();
         $session = $this->initialize();
-        $reviewer = $this->reviewer();
-
-        $createArguments = [
-            'title' => 'New documented process',
-            'description' => 'A descriptive procedure only.',
-            'steps' => $this->steps(),
-            'owner_id' => $employee->getKey(),
-            'main_topic' => 'Operations',
-            'visible_to' => [$role->getKey()],
-            'idempotency_key' => 'process-create-001',
-        ];
-        $create = $this->callTool('create_process', $createArguments, $session)
-            ->assertOk()->json('result.structuredContent');
-        $approval = McpApproval::query()->findOrFail($create['approval_id']);
-
-        $this->assertSame(McpApproval::STATUS_PENDING, $approval->status);
-        $this->assertSame(0, Process::query()->count());
-
-        app(McpApprovalService::class)->approve($approval, $reviewer, 'Reviewed the process definition.');
-        $created = $this->callTool('execute_create_process', ['approval_id' => $approval->getKey()], $session)
-            ->assertOk()->json('result.structuredContent');
-        $replayedCreate = $this->callTool('execute_create_process', ['approval_id' => $approval->getKey()], $session)
-            ->assertOk()->json('result.structuredContent');
-        $this->assertSame($created['process_id'], $replayedCreate['process_id']);
-
+        $args = ['title' => 'New documented process', 'description' => 'A descriptive procedure only.', 'steps' => $this->steps(), 'owner_id' => $employee->getKey(), 'main_topic' => 'Operations', 'visible_to' => [$role->getKey()], 'idempotency_key' => 'process-create-direct-1'];
+        $created = $this->callTool('create_process', $args, $session)->assertOk()->json('result.structuredContent');
         $process = Process::query()->findOrFail($created['process_id']);
+        $this->assertSame('New documented process', $process->title);
         $this->assertSame($employee->getKey(), $process->owner_id);
-        $this->assertSame($employee->getKey(), $process->owner);
         $this->assertEquals($this->steps(), $process->steps);
-        $this->assertSame(McpApproval::STATUS_EXECUTED, $approval->fresh()->status);
         $this->assertSame(0, Task::query()->count());
-        $this->assertDatabaseHas('mcp_execution_audits', [
-            'event_type' => 'approved_operation_execution',
-            'approval_id' => $approval->getKey(),
-            'status' => 'succeeded',
-            'ai_principal_id' => $this->principal->getKey(),
-            'human_approver_id' => $reviewer->getKey(),
-            'tool_name' => 'create_process',
-            'target_type' => 'process',
-            'target_id' => null,
-        ]);
+        $this->assertSame($created, $this->callTool('create_process', $args, $session)->assertOk()->json('result.structuredContent'));
 
-        $update = $this->callTool('update_process', [
-            'process_id' => $process->getKey(),
-            'expected_updated_at' => $process->fresh()->updated_at->toIso8601String(),
-            'title' => 'Updated documented process',
-            'owner_id' => $secondEmployee->getKey(),
-            'idempotency_key' => 'process-update-001',
-        ], $session)->assertOk()->json('result.structuredContent');
-        $updateApproval = McpApproval::query()->findOrFail($update['approval_id']);
-        $this->assertSame('New documented process', $process->fresh()->title);
-
-        app(McpApprovalService::class)->approve($updateApproval, $reviewer, 'Reviewed the process update.');
-        $updated = $this->callTool('execute_update_process', ['approval_id' => $updateApproval->getKey()], $session)
-            ->assertOk()->json('result.structuredContent');
-        $replayedUpdate = $this->callTool('execute_update_process', ['approval_id' => $updateApproval->getKey()], $session)
-            ->assertOk()->json('result.structuredContent');
-        $this->assertSame($updated['process_id'], $replayedUpdate['process_id']);
-
+        $updated = $this->callTool('update_process', ['process_id' => $process->getKey(), 'expected_updated_at' => $process->fresh()->updated_at->toIso8601String(), 'title' => 'Updated documented process', 'owner_id' => $second->getKey(), 'idempotency_key' => 'process-update-direct-1'], $session)->assertOk()->json('result.structuredContent');
+        $this->assertSame($process->getKey(), $updated['process_id']);
         $this->assertSame('Updated documented process', $process->fresh()->title);
-        $this->assertSame($secondEmployee->getKey(), $process->fresh()->owner_id);
-        $this->assertSame($secondEmployee->getKey(), $process->fresh()->owner);
-        $this->assertDatabaseHas('mcp_execution_audits', [
-            'event_type' => 'approved_operation_execution',
-            'approval_id' => $updateApproval->getKey(),
-            'status' => 'succeeded',
-            'tool_name' => 'update_process',
-            'target_type' => 'process',
-            'target_id' => (string) $process->getKey(),
-        ]);
+        $deleted = $this->callTool('delete_process', ['process_id' => $process->getKey(), 'expected_updated_at' => $process->fresh()->updated_at->toIso8601String(), 'idempotency_key' => 'process-delete-direct-1'], $session)->assertOk()->json('result.structuredContent');
+        $this->assertSame($process->getKey(), $deleted['process_id']);
+        $this->assertSoftDeleted('processes', ['id' => $process->getKey()]);
+        $this->assertSame(3, \App\Models\Mcp\McpDirectWriteExecution::query()->count());
+        $this->assertSame(0, McpApproval::query()->count());
 
-        $delete = $this->callTool('delete_process', [
-            'process_id' => $process->getKey(),
-            'expected_updated_at' => $process->fresh()->updated_at->toIso8601String(),
-            'idempotency_key' => 'process-delete-001',
-        ], $session)->assertOk()->json('result.structuredContent');
-        $deleteApproval = McpApproval::query()->findOrFail($delete['approval_id']);
-        $this->assertNull($process->fresh()->deleted_at);
-
-        app(McpApprovalService::class)->approve($deleteApproval, $reviewer, 'Reviewed the process deletion.');
-        $deleted = $this->callTool('execute_delete_process', ['approval_id' => $deleteApproval->getKey()], $session)
-            ->assertOk()->json('result.structuredContent');
-        $replayedDelete = $this->callTool('execute_delete_process', ['approval_id' => $deleteApproval->getKey()], $session)
-            ->assertOk()->json('result.structuredContent');
-        $this->assertSame($deleted['process_id'], $replayedDelete['process_id']);
-
-        $this->assertSame('deleted', $deleted['status']);
-        $this->assertNotNull(Process::withTrashed()->findOrFail($process->getKey())->deleted_at);
-        $this->assertDatabaseHas('mcp_execution_audits', [
-            'event_type' => 'approved_operation_execution',
-            'approval_id' => $deleteApproval->getKey(),
-            'status' => 'succeeded',
-            'tool_name' => 'delete_process',
-            'target_type' => 'process',
-            'target_id' => (string) $process->getKey(),
-        ]);
     }
-
-    public function test_process_update_is_blocked_when_visibility_is_revoked_after_approval(): void
+    public function test_process_update_is_blocked_when_visibility_is_revoked(): void
     {
-        $role = $this->grant(['process.index', 'process.update']);
-        $otherRole = HexaRole::query()->create([
-            'name' => 'Other process role',
-            'created_by_name' => 'Test',
-            'access' => [],
-            'guard' => (string) config('mcp.domain_permission_guard', 'web'),
-        ]);
-        $employee = Employee::factory()->create();
-        $process = $this->makeProcess($employee, [$role->getKey()], ['title' => 'Original process']);
-        $session = $this->initialize();
 
-        $request = $this->callTool('update_process', [
-            'process_id' => $process->getKey(),
-            'expected_updated_at' => $process->fresh()->updated_at->toIso8601String(),
-            'title' => 'Approved but no longer visible',
-            'idempotency_key' => 'process-update-revoked-001',
-        ], $session)->assertOk()->json('result.structuredContent');
-        $approval = McpApproval::query()->findOrFail($request['approval_id']);
-        app(McpApprovalService::class)->approve($approval, $this->reviewer(), 'Reviewed the process update.');
-
-        $this->travel(2)->seconds();
-        $process->forceFill(['visible_to' => [$otherRole->getKey()]])->save();
-
-        $response = $this->callTool('execute_update_process', ['approval_id' => $approval->getKey()], $session)
-            ->assertOk();
-        $this->assertArrayHasKey('error', $response->json());
-        $this->assertSame('Original process', $process->fresh()->title);
-        $this->assertSame(McpApproval::STATUS_EXECUTION_BLOCKED, $approval->fresh()->status);
-    }
-
-    public function test_stale_process_update_is_blocked_after_human_approval(): void
-    {
         $role = $this->grant(['process.index', 'process.update']);
         $employee = Employee::factory()->create();
-        $process = $this->makeProcess($employee, [$role->getKey()], ['title' => 'Before review']);
-        $session = $this->initialize();
-
-        $request = $this->callTool('update_process', [
-            'process_id' => $process->getKey(),
-            'expected_updated_at' => $process->fresh()->updated_at->toIso8601String(),
-            'title' => 'Stale approved title',
-            'idempotency_key' => 'process-update-stale-001',
-        ], $session)->assertOk()->json('result.structuredContent');
-        $approval = McpApproval::query()->findOrFail($request['approval_id']);
-        app(McpApprovalService::class)->approve($approval, $this->reviewer(), 'Reviewed the process update.');
-
-        $this->travel(2)->seconds();
-        $process->forceFill(['title' => 'Newer human edit'])->save();
-
-        $response = $this->callTool('execute_update_process', ['approval_id' => $approval->getKey()], $session)
-            ->assertOk();
+        $process = Process::factory()->create(['owner_id' => $employee->getKey(), 'visible_to' => [$role->getKey()], 'steps' => $this->steps(), 'title' => 'Visible process']);
+        $other = HexaRole::query()->create(['name' => 'Other role', 'created_by_name' => 'Test', 'access' => [], 'guard' => (string) config('mcp.domain_permission_guard', 'web')]);
+        $process->forceFill(['visible_to' => [$other->getKey()]])->save();
+        $response = $this->callTool('update_process', ['process_id' => $process->getKey(), 'expected_updated_at' => $process->fresh()->updated_at->toIso8601String(), 'title' => 'Must not execute', 'idempotency_key' => 'process-scope-direct-1'], $this->initialize())->assertOk();
         $this->assertArrayHasKey('error', $response->json());
-        $this->assertSame('Newer human edit', $process->fresh()->title);
-        $this->assertSame(McpApproval::STATUS_EXECUTION_BLOCKED, $approval->fresh()->status);
-    }
+        $this->assertSame('Visible process', $process->fresh()->title);
 
+    }
+    public function test_stale_process_update_is_blocked_without_overwriting_newer_record(): void
+    {
+
+        $role = $this->grant(['process.index', 'process.update']);
+        $employee = Employee::factory()->create();
+        $process = Process::factory()->create(['owner_id' => $employee->getKey(), 'visible_to' => [$role->getKey()], 'steps' => $this->steps(), 'title' => 'Original process title']);
+        $stale = $process->fresh()->updated_at->toIso8601String();
+        $this->travel(2)->seconds();
+        $process->forceFill(['title' => 'Concurrent process update'])->save();
+        $response = $this->callTool('update_process', ['process_id' => $process->getKey(), 'expected_updated_at' => $stale, 'title' => 'Must not overwrite', 'idempotency_key' => 'process-stale-direct-1'], $this->initialize())->assertOk();
+        $this->assertArrayHasKey('error', $response->json());
+        $this->assertSame('Concurrent process update', $process->fresh()->title);
+
+    }
     public function test_process_factory_matches_the_persisted_process_definition_schema(): void
     {
         $role = $this->grant(['process.index']);
