@@ -34,6 +34,7 @@ final class McpExecutionAuditResource extends Resource
     {
         return [
             'mcp_execution_audit.index' => __('Allows viewing MCP execution audit history'),
+            'mcp_execution_audit.retention_manage' => __('Allows placing and releasing legal or incident holds on MCP audit and approval records'),
         ];
     }
 

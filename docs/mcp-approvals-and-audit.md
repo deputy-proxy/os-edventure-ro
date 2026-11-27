@@ -1,12 +1,12 @@
 # MCP approval and execution audit controls
 
-> **Historical compatibility:** The per-operation human approval workflow described below is retained for historical records and legacy approval-mode tests. The active MCP write tools now use autonomous direct execution. New write tools must use `execution_mode => direct`; no human approval is requested in the active MCP write runtime.
+> **Historical compatibility only:** This page documents the legacy per-operation approval workflow retained for historical records and compatibility tests. The active MCP write tools use autonomous direct execution. New write tools must use execution_mode => direct; no per-operation human approval is requested in the active MCP write runtime.
 
 ## Status and boundary
 
 Issue #532 implemented the historical approval and audit infrastructure. At that time, the registry contained 48 read-only tools and nine approval-gated operations. The six #537 operations were create_task, update_task, assign_task, complete_task, create_customer_interaction and create_customer_lead. Issue #575 added create_process, update_process and delete_process. Each was exposed as a request tool plus an execution companion; the request never mutated business data. The active runtime has since migrated to one-call direct writes as documented below.
 
-Every current write tool uses the approval service and its existing domain action/workflow, including the descriptive process-definition workflow added by #575. A tool must not mutate domain data directly from its initial MCP request. The execution companion accepts only approval_id and executes the immutable encrypted payload. This infrastructure does not replace domain-specific authorization, record scoping, field allowlists, or service-level validation.
+The approval service is not used by active direct-write tools. Active writes execute in one call through existing authorized domain workflows, guarded by the current OAuth scope, AI principal, live domain permissions, record/field constraints, domain validation, idempotency ledger, and privacy-safe audit. Historical approval records remain available for reconciliation; they are not execution gates.
 
 ## Persistence
 
@@ -57,7 +57,7 @@ The idempotency key is unique per AI principal and OAuth client:
 
 Approval is single-use. Execution claims the approval row under a database lock and moves it to `executing` before the callback can run. A second worker cannot claim an already executing operation. The service re-checks the current AI principal, OAuth scopes, domain permissions, payload integrity, expiry, and distinct human approver. It performs a second authorization check immediately before invoking the domain callback.
 
-Every current write tool declares `operation_type => write` and `requires_approval => true`. Generic `addAuthorizedTool()` registration rejects writes; `addApprovalRequestTool()` can only create a pending request and never invokes a domain callback. `addApprovedExecutionTool()` accepts only the approval ID and dispatches the stored encrypted arguments through `McpApprovalService::executeApproved()`; it cannot accept replacement arguments. Future write tools must follow the same contract.
+Historical approval-mode registrations used requires_approval => true and paired request/execution tools. They are not published by the active registry. New write tools must use the direct execution boundary and must not introduce a request/approval/execution companion flow unless the architecture is explicitly changed and reviewed.
 
 The task callbacks use TaskWorkflow; CRM callbacks use CreateCustomerInteraction and CreateCustomerLead. These actions preserve the existing task assignment policy, project/phase relationship, customer-lead validation, status and attribution model events. Future tool callbacks must use an existing application/domain service rather than parallel business logic or direct persistence that bypasses policy and lifecycle checks.
 
@@ -79,7 +79,7 @@ Grant these permissions only to named staff roles responsible for reviewing MCP 
 
 ## Audit retention and incident review
 
-MCP audit records are retained as operational accountability records and cannot be deleted through the application. No MCP-specific retention duration has been approved by the policy owner/legal reviewer. Therefore no automatic MCP audit pruning or deletion is scheduled. Set a documented retention period only after the owner/legal review; do not infer that the existing Spatie Activity Log's 365-day cleanup setting applies to these dedicated MCP tables.
+**Approved retention:** the project owner approved one year (365 days) for MCP audit records on 2026-11-27. This applies to historical approval/audit records and direct-write invocation audit events. The technical purge workflow, backup/export lifecycle, and deletion evidence are not yet implemented or verified. Until then, preserve records and do not delete them manually. The direct-write idempotency ledger is a separate operational record class and must not be pruned in a way that permits duplicate execution or changed-payload key reuse. Preserve unresolved executing and uncertain records until reconciliation. Legal hold and active incident preservation override routine expiry. Do not infer that the Spatie Activity Log cleanup setting applies to these MCP tables.
 
 Access to approval records and execution audit records is permission-gated as described above. Review access should be limited to designated staff and reviewed periodically. Do not export or copy decrypted approval arguments/results into tickets or chat transcripts.
 
@@ -94,7 +94,7 @@ For an MCP incident:
 
 ## Issue #588 privacy and staging readiness
 
-The domain-owner approval matrix, unresolved MCP audit retention decision, isolated-staging acceptance protocol, evidence fields and release gate are tracked in [MCP privacy approvals and controlled-write staging record](mcp-readiness-issue-588.md). Automated feature coverage does not substitute for staging execution or independent reviewer sign-off. Production controlled writes remain disabled until the separate project-owner decision is recorded.
+The domain-owner approvals, one-year retention decision, designated independent reviewer, isolated-staging acceptance protocol, evidence fields and release gate are tracked in [MCP autonomous direct-write readiness](mcp-readiness-issue-588.md). Automated feature coverage does not substitute for staging execution or independent reviewer sign-off. Production controlled writes remain disabled until the separate project-owner decision is recorded.
 
 ## Validation
 
@@ -108,4 +108,4 @@ Direct writes retain Passport authentication, OAuth client binding, per-tool sco
 
 The `mcp_direct_write_executions` ledger is separate from historical approval records. Its unique key binds principal, OAuth client, tool and idempotency key. It stores a canonical payload hash and encrypted result. A matching completed replay returns the stored result; a changed payload is rejected; an executing or uncertain key is not replayed. The domain mutation and confirmed result are committed in one database transaction. Unexpected outcomes are marked uncertain and require reconciliation before any new key or manual recovery is used.
 
-Historical `mcp_approvals` and `mcp_execution_audits` rows are retained. The approval expiry scheduler and historical review pages remain available for reconciliation and audit; they are not part of the active direct-write path. Do not retry or reset existing uncertain approvals automatically.
+Historical mcp_approvals rows, approval-related mcp_execution_audits events, and review pages remain available for reconciliation; they do not gate the active direct-write path. Do not retry or reset existing uncertain operations automatically.
