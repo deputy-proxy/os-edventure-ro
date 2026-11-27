@@ -298,7 +298,7 @@ final class McpProcessToolsTest extends TestCase
 
         $process = Process::factory()->create();
 
-        $this->assertSame($process->owner_id, $process->owner);
+        $this->assertSame($process->owner_id, $process->owner->getKey());
         $this->assertSame([], $process->steps);
         $this->assertSame([(int) $role->getKey()], $process->visible_to);
     }
@@ -366,7 +366,6 @@ final class McpProcessToolsTest extends TestCase
             'title' => 'Documented process',
             'description' => 'Descriptive process notes.',
             'steps' => [],
-            'owner' => $owner->getKey(),
             'owner_id' => $owner->getKey(),
             'main_topic' => 'Operations',
             'visible_to' => $visibleTo,
