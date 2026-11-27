@@ -1,8 +1,10 @@
 # MCP approval and execution audit controls
 
+> **Historical compatibility:** The per-operation human approval workflow described below is retained for historical records and legacy approval-mode tests. The active MCP write tools now use autonomous direct execution. New write tools must use `execution_mode => direct`; no human approval is requested in the active MCP write runtime.
+
 ## Status and boundary
 
-Issue #532 implements the approval and audit infrastructure required before controlled MCP writes. The registry now contains 48 read-only tools and nine approval-gated operations. The six #537 operations are create_task, update_task, assign_task, complete_task, create_customer_interaction and create_customer_lead. Issue #575 adds create_process, update_process and delete_process. Each is exposed as a request tool plus an execution companion; the request never mutates business data.
+Issue #532 implemented the historical approval and audit infrastructure. At that time, the registry contained 48 read-only tools and nine approval-gated operations. The six #537 operations were create_task, update_task, assign_task, complete_task, create_customer_interaction and create_customer_lead. Issue #575 added create_process, update_process and delete_process. Each was exposed as a request tool plus an execution companion; the request never mutated business data. The active runtime has since migrated to one-call direct writes as documented below.
 
 Every current write tool uses the approval service and its existing domain action/workflow, including the descriptive process-definition workflow added by #575. A tool must not mutate domain data directly from its initial MCP request. The execution companion accepts only approval_id and executes the immutable encrypted payload. This infrastructure does not replace domain-specific authorization, record scoping, field allowlists, or service-level validation.
 
@@ -97,3 +99,13 @@ The domain-owner approval matrix, unresolved MCP audit retention decision, isola
 ## Validation
 
 The feature tests cover encrypted payload persistence, canonical hash stability, idempotency collisions, payload tampering, independent human review, AI self-approval denial, known initiator separation, rejection, cancellation, expiry, permission revocation immediately before execution, concurrent claims, uncertain outcomes, stale recovery, immutable audit history, and the Filament review pages. The MCP authorization tests also assert success and denied invocation audit records.
+
+## Autonomous direct-write execution (permission matrix 1.8.0)
+
+The nine supported business writes are exposed as one-call tools: create/update/assign/complete task, create customer interaction, create customer lead, and create/update/delete descriptive process definitions. Their execution mode is explicitly `direct`; the old request and execution companion registrations are not published.
+
+Direct writes retain Passport authentication, OAuth client binding, per-tool scopes, the configured Assistant principal, required domain permissions, record scopes, domain validation, output allowlists and privacy-safe invocation auditing. Each call requires an idempotency key.
+
+The `mcp_direct_write_executions` ledger is separate from historical approval records. Its unique key binds principal, OAuth client, tool and idempotency key. It stores a canonical payload hash and encrypted result. A matching completed replay returns the stored result; a changed payload is rejected; an executing or uncertain key is not replayed. The domain mutation and confirmed result are committed in one database transaction. Unexpected outcomes are marked uncertain and require reconciliation before any new key or manual recovery is used.
+
+Historical `mcp_approvals` and `mcp_execution_audits` rows are retained. The approval expiry scheduler and historical review pages remain available for reconciliation and audit; they are not part of the active direct-write path. Do not retry or reset existing uncertain approvals automatically.

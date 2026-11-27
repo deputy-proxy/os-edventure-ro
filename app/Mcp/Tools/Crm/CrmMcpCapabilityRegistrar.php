@@ -60,7 +60,7 @@ final class CrmMcpCapabilityRegistrar extends AuthorizedMcpCapabilityRegistrar
         $interactionAction = app(CreateCustomerInteraction::class);
         $leadAction = app(CreateCustomerLead::class);
 
-        $this->addApprovalRequestTool(
+        $this->addDirectWriteDefinition(
             $builder,
             'create_customer_interaction',
             function (User $user, array $arguments) use ($interactionAction): array {
@@ -92,7 +92,7 @@ final class CrmMcpCapabilityRegistrar extends AuthorizedMcpCapabilityRegistrar
             $this->schema('create_customer_interaction'),
         );
 
-        $this->addApprovalRequestTool(
+        $this->addDirectWriteDefinition(
             $builder,
             'create_customer_lead',
             function (User $user, array $arguments) use ($leadAction): array {
@@ -123,7 +123,7 @@ final class CrmMcpCapabilityRegistrar extends AuthorizedMcpCapabilityRegistrar
             $this->schema('create_customer_lead'),
         );
 
-        $this->addApprovedExecutionTool(
+        $this->addDirectWriteExecutor(
             $builder,
             'execute_create_customer_interaction',
             'create_customer_interaction',
@@ -139,11 +139,11 @@ final class CrmMcpCapabilityRegistrar extends AuthorizedMcpCapabilityRegistrar
                     ];
                 });
             },
-            'Executes an approved customer interaction creation using its immutable approved payload.',
+            'Records a customer interaction in one call. Free-text content is excluded from the result and audit metadata.',
             $this->schema('execute_create_customer_interaction'),
         );
 
-        $this->addApprovedExecutionTool(
+        $this->addDirectWriteExecutor(
             $builder,
             'execute_create_customer_lead',
             'create_customer_lead',
@@ -158,7 +158,7 @@ final class CrmMcpCapabilityRegistrar extends AuthorizedMcpCapabilityRegistrar
                     ];
                 });
             },
-            'Executes an approved customer lead creation using its immutable approved payload.',
+            'Creates a customer lead in one call. Contact details are excluded from the result and audit metadata.',
             $this->schema('execute_create_customer_lead'),
         );
     }
