@@ -17,6 +17,7 @@ use Hexters\HexaLite\Models\HexaRole;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Testing\TestResponse;
 use Laravel\Passport\Passport;
 use Tests\TestCase;
@@ -296,9 +297,12 @@ final class McpProcessToolsTest extends TestCase
     {
         $role = $this->grant(['process.index']);
 
+        $this->assertTrue(Schema::hasColumn('processes', 'owner_id'));
+        $this->assertFalse(Schema::hasColumn('processes', 'owner'));
+
         $process = Process::factory()->create();
 
-        $this->assertSame($process->owner_id, $process->owner);
+        $this->assertSame($process->owner_id, $process->owner->getKey());
         $this->assertSame([], $process->steps);
         $this->assertSame([(int) $role->getKey()], $process->visible_to);
     }
@@ -366,7 +370,6 @@ final class McpProcessToolsTest extends TestCase
             'title' => 'Documented process',
             'description' => 'Descriptive process notes.',
             'steps' => [],
-            'owner' => $owner->getKey(),
             'owner_id' => $owner->getKey(),
             'main_topic' => 'Operations',
             'visible_to' => $visibleTo,
