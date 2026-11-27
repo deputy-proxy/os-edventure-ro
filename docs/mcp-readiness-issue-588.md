@@ -104,7 +104,7 @@ Until that separate owner decision exists, production writes remain disabled. A 
 
 ## 5. CI validation status
 
-GitHub Actions run [#844](https://github.com/deputy-proxy/os-edventure-ro/actions/runs/46071509762), for the current PR head commit, completed successfully on 2026-11-27. All five jobs passed: PHP tests and migrations (including PHPUnit), MySQL migration/integrity regression, MariaDB 11.8.9 migration/integrity regression, PHP static analysis, and frontend build/dependency audit. This validates repository CI only; it does not replace isolated staging acceptance.
+GitHub Actions run [#844](https://github.com/deputy-proxy/os-edventure-ro/actions/runs/46071509762), for PR code commit `cd3c8d71d5dfc7f25acbd3eef68016e40a5fb826` (immediately before the subsequent documentation-only reviewer/CI note commit), completed successfully on 2026-11-27. All five jobs passed: PHP tests and migrations (including PHPUnit), MySQL migration/integrity regression, MariaDB 11.8.9 migration/integrity regression, PHP static analysis, and frontend build/dependency audit. This validates repository CI only; it does not replace isolated staging acceptance.
 
 ## 6. Current acceptance status
 
