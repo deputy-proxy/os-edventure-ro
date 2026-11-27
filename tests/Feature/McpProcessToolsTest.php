@@ -7,6 +7,7 @@ use App\Mcp\Server\McpServerFactory;
 use App\Mcp\Tools\Processes\ProcessMcpCapabilityRegistrar;
 use App\Models\Employee;
 use App\Models\Mcp\McpApproval;
+use App\Models\Mcp\McpDirectWriteExecution;
 use App\Models\Process;
 use App\Models\Project;
 use App\Models\ProjectPhase;
@@ -79,7 +80,6 @@ final class McpProcessToolsTest extends TestCase
 
     public function test_process_tools_are_registered_with_closed_schemas_and_direct_write_boundaries(): void
     {
-
         $this->grant(['process.index', 'process.create', 'process.update', 'process.delete']);
         $tools = $this->mcpPost(['jsonrpc' => '2.0', 'id' => 2, 'method' => 'tools/list', 'params' => new \stdClass], $this->initialize())->assertOk()->json('result.tools');
         $expected = ['get_processes', 'get_process_details', 'get_process_steps', 'get_process_tasks', 'create_process', 'update_process', 'delete_process'];
@@ -95,6 +95,7 @@ final class McpProcessToolsTest extends TestCase
         }
 
     }
+
     public function test_process_tools_reject_a_different_authenticated_principal(): void
     {
         $this->grant(['process.index']);
@@ -240,7 +241,6 @@ final class McpProcessToolsTest extends TestCase
 
     public function test_process_writes_execute_directly_with_idempotent_replay(): void
     {
-
         $role = $this->grant(['process.index', 'process.create', 'process.update', 'process.delete']);
         $employee = Employee::factory()->create();
         $second = Employee::factory()->create();
@@ -260,13 +260,13 @@ final class McpProcessToolsTest extends TestCase
         $deleted = $this->callTool('delete_process', ['process_id' => $process->getKey(), 'expected_updated_at' => $process->fresh()->updated_at->toIso8601String(), 'idempotency_key' => 'process-delete-direct-1'], $session)->assertOk()->json('result.structuredContent');
         $this->assertSame($process->getKey(), $deleted['process_id']);
         $this->assertSoftDeleted('processes', ['id' => $process->getKey()]);
-        $this->assertSame(3, \App\Models\Mcp\McpDirectWriteExecution::query()->count());
+        $this->assertSame(3, McpDirectWriteExecution::query()->count());
         $this->assertSame(0, McpApproval::query()->count());
 
     }
+
     public function test_process_update_is_blocked_when_visibility_is_revoked(): void
     {
-
         $role = $this->grant(['process.index', 'process.update']);
         $employee = Employee::factory()->create();
         $process = Process::factory()->create(['owner_id' => $employee->getKey(), 'visible_to' => [$role->getKey()], 'steps' => $this->steps(), 'title' => 'Visible process']);
@@ -277,9 +277,9 @@ final class McpProcessToolsTest extends TestCase
         $this->assertSame('Visible process', $process->fresh()->title);
 
     }
+
     public function test_stale_process_update_is_blocked_without_overwriting_newer_record(): void
     {
-
         $role = $this->grant(['process.index', 'process.update']);
         $employee = Employee::factory()->create();
         $process = Process::factory()->create(['owner_id' => $employee->getKey(), 'visible_to' => [$role->getKey()], 'steps' => $this->steps(), 'title' => 'Original process title']);
@@ -291,6 +291,7 @@ final class McpProcessToolsTest extends TestCase
         $this->assertSame('Concurrent process update', $process->fresh()->title);
 
     }
+
     public function test_process_factory_matches_the_persisted_process_definition_schema(): void
     {
         $role = $this->grant(['process.index']);

@@ -46,7 +46,7 @@ class McpCrmToolsTest extends TestCase
         File::ensureDirectoryExists($this->keyPath, 0700, true);
         $private = $this->keyPath.'/oauth-private.key';
         $public = $this->keyPath.'/oauth-public.key';
-        if (! is_file($private) || ! is_file($public)) {
+        if (is_file($private) === false || is_file($public) === false) {
             $key = openssl_pkey_new(['private_key_bits' => 2048, 'private_key_type' => OPENSSL_KEYTYPE_RSA]);
             $this->assertNotFalse($key);
             $this->assertTrue(openssl_pkey_export($key, $privateKey));
@@ -81,7 +81,6 @@ class McpCrmToolsTest extends TestCase
 
     public function test_crm_tools_include_read_tools_and_direct_writes_with_closed_schemas(): void
     {
-
         $this->grant(['customer.index', 'customer_contract.index', 'customer_interaction.index', 'customer_lead.index', 'finance-unit-economics.view', 'customer_interaction.create', 'customer_lead.create']);
         $tools = $this->mcpPost(['jsonrpc' => '2.0', 'id' => 2, 'method' => 'tools/list', 'params' => new \stdClass], $this->initialize())->assertOk()->json('result.tools');
         $expected = ['search_customers', 'get_customer_details', 'get_customer_contracts', 'get_customer_interactions', 'get_sales_pipeline', 'get_lead_details', 'get_customer_economics', 'create_customer_interaction', 'create_customer_lead'];
@@ -97,6 +96,7 @@ class McpCrmToolsTest extends TestCase
         }
 
     }
+
     public function test_customer_search_filters_paginates_and_omits_personal_identifiers(): void
     {
         $this->grant(['customer.index']);
@@ -312,7 +312,6 @@ class McpCrmToolsTest extends TestCase
 
     public function test_customer_interaction_and_lead_writes_execute_directly(): void
     {
-
         $this->grant(['customer.index', 'customer_interaction.create', 'customer_lead.create']);
         $customer = Customer::factory()->create();
         $session = $this->initialize();

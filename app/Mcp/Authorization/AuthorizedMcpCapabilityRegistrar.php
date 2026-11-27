@@ -221,7 +221,7 @@ abstract class AuthorizedMcpCapabilityRegistrar implements McpCapabilityRegistra
 
         if ($approvedPermission->operationType === 'write' && $approvedPermission->executionMode === 'direct') {
             $definition = $this->pendingDirectWrites[$approvedOperationToolName] ?? null;
-            if (! is_array($definition) || ! is_callable($definition['previewFactory'])) {
+            if (! is_array($definition)) {
                 throw new LogicException("Direct write [{$approvedOperationToolName}] must define its validator before its executor.");
             }
 

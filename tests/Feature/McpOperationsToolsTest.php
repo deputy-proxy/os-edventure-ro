@@ -7,6 +7,7 @@ use App\Mcp\Server\McpServerFactory;
 use App\Mcp\Tools\Operations\OperationsMcpCapabilityRegistrar;
 use App\Models\Employee;
 use App\Models\Mcp\McpApproval;
+use App\Models\Mcp\McpDirectWriteExecution;
 use App\Models\Meeting;
 use App\Models\Project;
 use App\Models\ProjectPhase;
@@ -78,7 +79,6 @@ class McpOperationsToolsTest extends TestCase
 
     public function test_operations_tools_include_read_tools_and_direct_writes_with_closed_schemas(): void
     {
-
         $this->grant(['project.index', 'project_phase.index', 'task.index', 'task.view_all', 'task.create', 'task.update', 'task.assign']);
         $tools = $this->mcpPost(['jsonrpc' => '2.0', 'id' => 2, 'method' => 'tools/list', 'params' => new \stdClass], $this->initialize())->assertOk()->json('result.tools');
         $expected = ['get_projects', 'get_project_details', 'get_tasks', 'get_task_details', 'get_overdue_tasks', 'get_operational_bottlenecks', 'get_quarterly_objectives', 'get_meetings', 'create_task', 'update_task', 'assign_task', 'complete_task'];
@@ -94,6 +94,7 @@ class McpOperationsToolsTest extends TestCase
         }
 
     }
+
     public function test_task_lists_and_details_are_scoped_to_assigned_or_created_records(): void
     {
         $other = User::factory()->create();
@@ -404,7 +405,6 @@ class McpOperationsToolsTest extends TestCase
 
     public function test_task_writes_execute_directly_with_idempotent_replay(): void
     {
-
         $this->grant(['task.create', 'task.update', 'task.assign', 'task.view_all', 'project.index', 'project_phase.index']);
         $project = Project::factory()->create();
         $phase = ProjectPhase::factory()->create(['project_id' => $project->getKey()]);
@@ -428,12 +428,12 @@ class McpOperationsToolsTest extends TestCase
         $this->assertSame($assignee->getKey(), $task->fresh()->assigned_to);
         $this->callTool('complete_task', ['task_id' => $task->getKey(), 'expected_updated_at' => $task->fresh()->updated_at->toIso8601String(), 'idempotency_key' => 'task-complete-direct-1'], $session)->assertOk();
         $this->assertSame('done', $task->fresh()->status);
-        $this->assertSame(4, \App\Models\Mcp\McpDirectWriteExecution::query()->count());
+        $this->assertSame(4, McpDirectWriteExecution::query()->count());
 
     }
+
     public function test_task_assignment_preserves_the_existing_eligible_role_policy(): void
     {
-
         $this->grant(['task.update', 'task.assign']);
         $project = Project::factory()->create();
         $phase = ProjectPhase::factory()->create(['project_id' => $project->getKey()]);
@@ -450,9 +450,9 @@ class McpOperationsToolsTest extends TestCase
         $this->assertSame($eligible->getKey(), $task->fresh()->assigned_to);
 
     }
+
     public function test_task_write_is_blocked_when_record_leaves_the_principals_scope(): void
     {
-
         $this->grant(['task.update']);
         $project = Project::factory()->create();
         $phase = ProjectPhase::factory()->create(['project_id' => $project->getKey()]);
@@ -464,9 +464,9 @@ class McpOperationsToolsTest extends TestCase
         $this->assertSame('Original task title', $task->fresh()->action);
 
     }
+
     public function test_stale_task_write_is_blocked_without_overwriting_the_newer_record(): void
     {
-
         $this->grant(['task.update', 'task.view_all']);
         $project = Project::factory()->create();
         $phase = ProjectPhase::factory()->create(['project_id' => $project->getKey()]);
