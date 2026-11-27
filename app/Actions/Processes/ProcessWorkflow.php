@@ -106,8 +106,6 @@ final class ProcessWorkflow
             'title' => $values['title'],
             'description' => $values['description'],
             'steps' => $values['steps'],
-            // The original non-nullable owner column is retained for legacy schema compatibility.
-            'owner' => $ownerId,
             'owner_id' => $ownerId,
             'main_topic' => $values['main_topic'],
             'visible_to' => $values['visible_to'],
@@ -126,11 +124,6 @@ final class ProcessWorkflow
         $this->assertExpectedUpdatedAt($process, (string) $values['expected_updated_at']);
 
         $changes = Arr::only($values, ['title', 'description', 'steps', 'owner_id', 'main_topic', 'visible_to']);
-        if (array_key_exists('owner_id', $changes)) {
-            // Keep the legacy required column aligned with the canonical owner relationship.
-            $changes['owner'] = (int) $changes['owner_id'];
-        }
-
         $process->fill($changes);
         $process->save();
 
