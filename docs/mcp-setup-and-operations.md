@@ -6,10 +6,10 @@ This is the operational entry point for the os-edventure-ro MCP integration. It 
 
 ## 1. Current capability and safety boundary
 
-The remote MCP endpoint is **/mcp** and uses Streamable HTTP. The current registry contains 66 tools:
+The remote MCP endpoint is **/mcp** and uses Streamable HTTP. The current registry contains 57 tools:
 
 - 48 read-only tools covering executive reporting, finance, CRM, operations, process definitions, HR/payroll, products, marketing, and academic operations;
-- 18 approval-request/execution tools representing nine controlled operations: six task/CRM operations and create/update/soft-delete process definitions.
+- nine autonomous direct-write tools representing nine operations: six task/CRM operations and create/update/soft-delete process definitions.
 
 The server also exposes five permission-aware read-only resources and five prompt templates. Prompts do not fetch data or grant permissions; each tool/resource call is independently authorized.
 
@@ -280,3 +280,21 @@ Before a PR, follow the current .github/workflows/tests.yml and [AI development 
 - [Documentation issue #540](https://github.com/deputy-proxy/os-edventure-ro/issues/540)
 
 The shared engineering workflow is [osingle.md](../.chatgpt/osingle.md); repository-specific commands and runtime facts are maintained in [repository.md](../.chatgpt/repository.md).
+
+
+## Autonomous MCP writes
+
+The active write contract is one MCP call per operation. The nine supported write tools accept their business arguments and a required `idempotency_key`; no human approval step or approval ID is involved. OAuth clients must request the current direct-write scopes after the permission-matrix version changes. Old request/execute scopes are no longer published.
+
+The application records each direct execution in `mcp_direct_write_executions` and the privacy-safe `mcp_execution_audits` trail. Matching completed retries return the original result. Payload collisions are rejected. Executions marked uncertain must be reconciled against the domain record and audit history; never replay them automatically.
+
+Historical approval records, review pages and the expiry/recovery scheduler remain available for existing records. They do not gate new direct writes. Production write enablement remains a separate deployment decision and is not authorized by this code change.
+
+
+### Environment safety switch
+
+Direct-write tools are registered with their authorization and audit boundaries, but execution is blocked unless MCP_DIRECT_WRITES_ENABLED=true is explicitly configured for that environment. The default is false. Do not enable it in production as part of this PR. Staging activation requires its own explicit authorization after the synthetic-data acceptance tests and reconciliation of historical uncertain approvals.
+
+### Environment safety switch
+
+Direct-write tools are registered with their authorization and audit boundaries, but execution is blocked unless MCP_DIRECT_WRITES_ENABLED=true is explicitly configured for that environment. The default is false. This PR does not enable the switch in staging or production. Staging activation requires separate explicit authorization after synthetic-data acceptance tests and reconciliation of historical uncertain approvals. Production activation remains a separate decision.

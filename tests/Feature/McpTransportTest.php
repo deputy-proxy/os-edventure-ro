@@ -138,7 +138,7 @@ class McpTransportTest extends TestCase
             $tools = [...$tools, ...$page->json('result.tools', [])];
             $cursor = $page->json('result.nextCursor');
         }
-        $this->assertCount(66, $tools);
+        $this->assertCount(57, $tools);
         $this->assertEqualsCanonicalizing([
             'get_executive_overview', 'get_management_kpis', 'get_kpi_alerts', 'get_business_health',
             'get_management_priorities', 'get_period_comparison', 'get_financial_overview', 'get_transactions',
@@ -147,11 +147,9 @@ class McpTransportTest extends TestCase
             'search_customers', 'get_customer_details', 'get_customer_contracts', 'get_customer_interactions',
             'get_sales_pipeline', 'get_lead_details', 'get_customer_economics',
             'create_customer_interaction', 'create_customer_lead',
-            'execute_create_customer_interaction', 'execute_create_customer_lead',
             'get_projects', 'get_project_details', 'get_tasks', 'get_task_details',
             'get_overdue_tasks', 'get_operational_bottlenecks', 'get_quarterly_objectives', 'get_meetings',
             'create_task', 'update_task', 'assign_task', 'complete_task',
-            'execute_create_task', 'execute_update_task', 'execute_assign_task', 'execute_complete_task',
             'get_hr_overview', 'get_approved_evaluation_summary', 'get_timesheet_status',
             'get_payroll_period_status', 'get_payroll_validation_exceptions',
             'get_product_catalogue', 'get_product_cost_summary', 'get_product_profitability',
@@ -159,7 +157,6 @@ class McpTransportTest extends TestCase
             'get_academic_overview', 'get_attendance_summary', 'get_group_operations',
             'get_processes', 'get_process_details', 'get_process_steps', 'get_process_tasks',
             'create_process', 'update_process', 'delete_process',
-            'execute_create_process', 'execute_update_process', 'execute_delete_process',
         ], array_column($tools, 'name'));
 
         $resources = $this->mcpPost([

@@ -20,6 +20,7 @@ final readonly class McpToolPermission
         public string $operationType = 'read',
         public bool $requiresApproval = false,
         public array $optionalDomainPermissions = [],
+        public string $executionMode = 'none',
     ) {
         if (trim($this->toolName) === '' || trim($this->mcpScope) === '' || trim($this->recordScope) === '') {
             throw new InvalidArgumentException('An MCP tool permission requires a tool name, OAuth scope and record scope.');
@@ -30,9 +31,11 @@ final readonly class McpToolPermission
         }
 
         if (! in_array($this->operationType, ['read', 'write'], true)
-            || ($this->operationType === 'write' && ! $this->requiresApproval)
-            || ($this->operationType === 'read' && $this->requiresApproval)) {
-            throw new InvalidArgumentException('MCP write tools must explicitly require human approval; read tools cannot be marked as writes.');
+            || ($this->operationType === 'read' && ($this->requiresApproval || $this->executionMode !== 'none'))
+            || ($this->operationType === 'write' && ! in_array($this->executionMode, ['approval', 'direct'], true) && ! ($this->executionMode === 'none' && $this->requiresApproval))
+            || ($this->operationType === 'write' && $this->executionMode === 'approval' && ! $this->requiresApproval)
+            || ($this->operationType === 'write' && $this->executionMode === 'direct' && $this->requiresApproval)) {
+            throw new InvalidArgumentException('MCP writes must explicitly select approval or direct execution; read tools cannot select a write mode.');
         }
 
         if (! array_is_list($this->domainPermissions) || $this->domainPermissions === [] || count(array_unique($this->domainPermissions)) !== count($this->domainPermissions) || $this->allowedFields === []) {
@@ -83,6 +86,7 @@ final readonly class McpToolPermission
             operationType: (string) ($definition['operation_type'] ?? 'read'),
             requiresApproval: (bool) ($definition['requires_approval'] ?? false),
             optionalDomainPermissions: $definition['optional_domain_permissions'] ?? [],
+            executionMode: (string) ($definition['execution_mode'] ?? (($definition['operation_type'] ?? 'read') === 'write' && ($definition['requires_approval'] ?? false) ? 'approval' : 'none')),
         );
     }
 }
