@@ -1,6 +1,6 @@
 # MCP setup and operations guide
 
-Last reconciled with the repository implementation: 2026-11-23.
+Last reconciled with the repository implementation: 2026-11-27.
 
 This is the operational entry point for the os-edventure-ro MCP integration. It describes committed application behavior and the verified ChatGPT connection flow. A live ChatGPT workspace has successfully connected to this MCP server, discovered its tools, and executed tool calls. This verifies ChatGPT interoperability for the tested connection; it does not by itself establish production hosting, proxy, streaming, or full operational readiness.
 
@@ -15,9 +15,9 @@ The server also exposes five permission-aware read-only resources and five promp
 
 Every tool requires its dedicated OAuth scope and the configured AI principal. Dynamic client registration advertises and allows the complete scope set from the permission matrix so ChatGPT can request the scopes needed by discovered tools; the issued token must still contain the individual tool scope. Required/optional HexaLite permissions, record scopes, and nested output-field allowlists are enforced server-side. The AI principal must never receive Owner, superadmin, or blanket administrator privileges.
 
-The nine task/CRM and process-definition operations are not direct writes from the initial request. A request creates a pending approval containing an immutable encrypted payload. A separate eligible human reviewer must approve the exact payload in the os-edventure-ro panel. The execution tool accepts only the approval ID and rechecks authorization before calling the existing domain action/workflow. Process-definition writes do not execute process steps or create tasks. ChatGPT's conversational confirmation is not a substitute for this approval.
+The nine task/CRM and process-definition operations are autonomous direct writes: each business operation executes in one call through its existing authorized domain workflow. Every call rechecks the configured AI principal, dedicated OAuth scope, live domain permissions, record scope, input validation, and required idempotency key. There is no per-operation human approval step in the active runtime. Independent human review is a release-evidence control tracked in issue #588, not a write-time approval. Process-definition writes do not execute process steps or create tasks.
 
-No MCP write is available for payroll, invoices, financial corrections/reversals, lead conversion, or user/role administration. HR and academic outputs remain aggregate-only. Production enablement and any expansion of sensitive fields remain subject to the field, audience, and retention review recorded in [issue #539](https://github.com/deputy-proxy/os-edventure-ro/issues/539).
+No MCP write is available for payroll, invoices, financial corrections/reversals, lead conversion, or user/role administration. HR and academic outputs remain aggregate-only. Production enablement and any expansion of sensitive fields remain subject to the field, audience, and retention controls recorded in [issue #588](https://github.com/deputy-proxy/os-edventure-ro/issues/588).
 
 ## 2. Configuration reference
 
@@ -116,9 +116,9 @@ The Help Center also documents a legacy Apps flow. Follow the current workspace 
 During OAuth, an authenticated os-edventure-ro user completes consent. The Passport token subject is the dedicated AI Assistant principal, not the human who approved the connection. The default redirect allowlist contains https://chatgpt.com; add another callback origin only if OpenAI documents it for the selected workspace flow and it has been reviewed. Never use a wildcard.
 OpenAI's connection guide recommends refresh-token support and advertising offline_access (or an equivalent refresh capability) in discovery metadata. This application advertises authorization_code and refresh_token in grant_types_supported; scopes_supported does not include offline_access. The successful live ChatGPT OAuth connection demonstrates that the tested workspace accepts the current metadata and completes authentication. Keep the metadata discrepancy documented, but it is no longer an interoperability blocker for the tested connection. Revisit it only if another supported ChatGPT workspace/client requires offline_access explicitly.
 
-Test a low-risk read tool first and confirm output is limited to the AI principal's permissions. A successful tool scan does not prove every tool is authorized or production-ready. Test task/CRM writes only in a controlled environment with a designated independent human reviewer and the os-edventure-ro approval workflow enabled.
+Test a low-risk read tool first and confirm output is limited to the AI principal's permissions. A successful tool scan does not prove every tool is authorized or production-ready. Test direct writes only in isolated staging with synthetic records, outbound integrations disabled, and the direct-write acceptance suite from issue #588. Human review is performed after the suite as a release-evidence control.
 
-ChatGPT may ask users to confirm write actions, but that UI confirmation does not approve the os-edventure-ro operation. A human with mcp_approval.approve must review the pending operation in the authenticated os-edventure-ro UI, distinct from the AI principal and, when known, the human initiator.
+ChatGPT UI confirmation is not the authorization boundary. Active direct writes are authorized by the server-side OAuth, principal, domain-permission, record-scope, and validation checks. The designated independent reviewer reviews the staging evidence; the reviewer does not approve each MCP write.
 
 Workspace apps use a reviewed snapshot of discovered tool definitions. When server schemas or metadata change, an administrator must refresh/review the tool list and publish the updated version as required by the workspace UI. Server-side changes do not automatically become enabled workspace actions.
 
@@ -167,7 +167,7 @@ Run this from an authorized operator shell. It revokes all active access and ref
 
 ## 6. Permission matrix and tool contracts
 
-The versioned runtime permission matrix is config/mcp.php (currently version 1.7.0). It is the source of truth for each tool's OAuth scope, required/optional HexaLite permissions, record scope, nested output-field allowlist, read/write classification, and approval requirement.
+The versioned runtime permission matrix is config/mcp.php (currently version 1.8.0). It is the source of truth for each tool's OAuth scope, required/optional HexaLite permissions, record scope, nested output-field allowlist, read/write classification, and execution mode.
 
 The AI principal receives no domain permissions automatically. Assigning a permission to its Assistant role must be deliberate and limited to keys declared by the matrix. Handlers check optional source permissions independently. List/report handlers apply record scopes before filters, counts, aggregation, and pagination.
 
@@ -182,22 +182,19 @@ Use the domain contract documents for exact schemas, output fields, date semanti
 
 Do not infer missing data as zero, combine unlike currencies or units, widen record scope for convenience, or return fields merely because they exist on an Eloquent model.
 
-## 7. Human approvals and execution audit
+## 7. Historical approval records and active execution audit
 
-The os-edventure-ro Filament panel exposes:
-
-- MCP Approvals: /admin/mcp-approvals, permissions mcp_approval.index to view and mcp_approval.approve to approve/reject with a rationale;
-- MCP Execution Audit: /admin/mcp-execution-audits, permission mcp_execution_audit.index to inspect audit history.
+The os-edventure-ro Filament panel retains the historical MCP Approvals pages (/admin/mcp-approvals) for legacy records and exposes MCP Execution Audit (/admin/mcp-execution-audits) for audit history. These pages do not approve or gate active direct writes.
 
 Grant these permissions only to designated human reviewers/auditors. The AI principal is denied these UI permissions even if misconfigured. A reviewer must be independent of the AI principal and, when a trusted initiator is known, distinct from that initiator.
 
-Approval requests are bound to a canonical SHA-256 payload hash, encrypted at rest, single-use, and expiring. The default approval TTL is 15 minutes. Execution rechecks the AI principal, OAuth client, scope, domain permissions, payload integrity, expiry, and reviewer eligibility. The execution companion accepts only the approval ID; callers cannot replace the approved arguments.
+Historical approval requests remain payload-bound, encrypted, single-use, and expiring. This lifecycle applies only to historical approval records and legacy compatibility tests; the active direct-write runtime does not create approval requests or execution companions.
 
 The audit trail is stored separately from encrypted operation payloads. Audit rows contain safe identifiers, state, result/error codes, timestamps, approval references, and domain-event references where available; raw arguments, result bodies, access tokens, and exception messages are not copied into audit events.
 
-The scheduler runs **mcp:expire-approvals** every minute. It expires pending/approved requests and marks stale executing claims uncertain after the configured stale interval. For execution_uncertain, inspect the domain record and its domain-event history before manual recovery. Never retry an uncertain operation merely because ChatGPT did not receive a response.
+The scheduler retains the historical approval expiry command and marks stale direct-write claims uncertain through the direct-write recovery service. For any uncertain execution, inspect the domain record and its domain-event history before manual recovery. Never retry an uncertain operation merely because ChatGPT did not receive a response.
 
-**Retention gap:** no MCP-specific audit retention duration has been approved by the policy owner/legal reviewer. The application schedules no automatic MCP audit deletion. Do not assume the separate Spatie Activity Log retention setting applies to MCP approval/audit tables. Production enablement remains subject to a documented retention decision.
+**Retention decision:** the project owner approved one year (365 days) for MCP audit records on 2026-11-27. The technical purge workflow, treatment of backups/exports, and proof of deletion remain to be implemented and verified. Do not manually delete records or infer that the separate Spatie Activity Log retention setting applies. See [issue #588 readiness evidence](mcp-readiness-issue-588.md).
 
 See [MCP approval and execution audit controls](mcp-approvals-and-audit.md) for the full lifecycle and incident procedure.
 
@@ -213,11 +210,11 @@ Before enabling the endpoint for a real workspace, verify in the target environm
 - request-size limits and rate limiting are consistent at the edge and application;
 - the file-backed MCP session path is writable and persistent; if requests can reach multiple hosts with non-shared filesystems, use a shared PSR-16 session store and distributed lock before routing across nodes;
 - the scheduler invokes Laravel schedule:run every minute so approval expiry/recovery runs;
-- the AI principal has only reviewed permissions and designated human reviewers have separate approval/audit permissions;
+- the AI principal has only reviewed permissions and designated human reviewers have separate audit/review permissions;
 - audit access, retention, monitoring, incident response, backup, and recovery procedures are approved and tested;
-- the live ChatGPT workspace connection, tool discovery, and tool invocation have been exercised; separately verify the safe read/write approval flow in the target environment before enabling controlled writes.
+- the live ChatGPT workspace connection, tool discovery, and tool invocation have been exercised; separately run the autonomous direct-write acceptance suite in isolated staging, obtain independent human review, and record a separate owner decision before any production enablement.
 
-The repository records a read-only Hostinger runtime snapshot from 2026-11-19, but it does not prove the deployed /mcp request lifecycle. CDN/proxy buffering, effective PHP-FPM timeout behavior, multi-instance topology, and the safe read/write approval workflow remain staging verification items. Live ChatGPT interoperability has been demonstrated separately. Follow [production operations and recovery](operations-and-recovery.md) for general release, health, queue, scheduler, backup, incident, and recovery procedures. Green CI does not prove hosting compatibility.
+The repository records a read-only Hostinger runtime snapshot from 2026-11-19, but it does not prove the deployed /mcp request lifecycle. CDN/proxy buffering, effective PHP-FPM timeout behavior, multi-instance topology, and the direct-write acceptance suite and hosting lifecycle remain staging verification items. Live ChatGPT interoperability has been demonstrated separately. Follow [production operations and recovery](operations-and-recovery.md) for general release, health, queue, scheduler, backup, incident, and recovery procedures. Green CI does not prove hosting compatibility.
 
 Deployment must follow the approved release process: reviewed PR, green required CI, verified backup, migration preflight, one authorized migration execution, cache refresh, queue-worker restart where applicable, and post-deploy health/workflow checks. Never run migrations concurrently from multiple replicas or roll back schema changes without reviewing the migration's data-preservation behavior.
 
@@ -226,7 +223,7 @@ Deployment must follow the approved release process: reviewed PR, green required
 Use existing application and infrastructure controls rather than exposing a new public MCP diagnostics endpoint:
 
 - Review authentication/authorization failures and transport errors in restricted application logs using the request ID; do not log bearer tokens or request bodies.
-- Review MCP approval and execution audit records for tool failures, approval backlog, rejected/expired requests, and uncertain executions.
+- Review direct-write execution and invocation audit records for tool failures, denied calls, and uncertain executions. Historical approval backlog/rejection/expiry is reviewed only when reconciling legacy records.
 - Use the existing [monitoring alert matrix](monitoring-alert-matrix.md) for platform-level coverage. No MCP-specific external alert thresholds or delivery route are recorded as verified; establish and test them with the system owner before claiming operational alert coverage.
 
 - /up is the framework liveness endpoint;
@@ -242,7 +239,7 @@ For MCP-specific incidents:
 4. For execution_uncertain, reconcile the underlying domain state and event history before any manual action. Do not automatically retry.
 5. Preserve approval/audit records, record the incident decision in the relevant restricted change/incident record, and restore permissions or reauthorize only after review.
 
-Do not paste decrypted approval payloads, customer/student/employee data, tokens, secrets, or raw exception details into issues or chat. The audit table has no approved automatic retention/pruning policy; preserve its records until a policy owner/legal reviewer approves a retention schedule.
+Do not paste decrypted approval payloads, customer/student/employee data, tokens, secrets, or raw exception details into issues or chat. The owner-approved retention period is 365 days; until the technical purge and backup lifecycle are implemented and verified, preserve records and do not manually delete them.
 
 ## 10. Validation and troubleshooting
 
@@ -263,11 +260,11 @@ Before a PR, follow the current .github/workflows/tests.yml and [AI development 
 | Token rejected | Confirm the token is current, contains mcp:use and the tool-specific scope, and has the /mcp resource audience. |
 | Tool absent after a server update | Refresh/review the ChatGPT app's discovered actions; workspace definitions may be a frozen snapshot. |
 | Tool call denied | Check the dedicated OAuth scope, configured AI principal, Assistant role, required domain permissions, record scope, and current token state. Do not solve denial by granting Owner/superadmin. |
-| Approval cannot be reviewed | Confirm the human reviewer has mcp_approval.approve and is distinct from the AI principal and known initiator. |
+| Historical approval cannot be reviewed | Confirm the reviewer has mcp_approval.approve and is distinct from the AI principal and known initiator. This does not affect active direct writes. |
 | Session/handshake errors | Check MCP_SESSION_PATH ownership/permissions, persistence, TTL, and whether requests reach different hosts without shared session storage/locking. |
 | HTTP 413 | Check MCP_MAX_BODY_BYTES and any upstream request-body limit. |
 | Request times out | Compare MCP_REQUEST_TIMEOUT_SECONDS with PHP-FPM, web server, CDN, and platform limits; the application cap cannot raise a lower upstream timeout. |
-| Approval remains executing | Check the scheduled expiry command and MCP_EXECUTION_STALE_MINUTES; reconcile the domain event before manual recovery. |
+| Direct write remains uncertain | Inspect the direct-write execution ledger and domain event; reconcile before any manual recovery. Never retry with a new key until the outcome is known. |
 
 ## 11. Related documentation and tracking
 
@@ -290,10 +287,6 @@ The application records each direct execution in `mcp_direct_write_executions` a
 
 Historical approval records, review pages and the expiry/recovery scheduler remain available for existing records. They do not gate new direct writes. Production write enablement remains a separate deployment decision and is not authorized by this code change.
 
-
-### Environment safety switch
-
-Direct-write tools are registered with their authorization and audit boundaries, but execution is blocked unless MCP_DIRECT_WRITES_ENABLED=true is explicitly configured for that environment. The default is false. Do not enable it in production as part of this PR. Staging activation requires its own explicit authorization after the synthetic-data acceptance tests and reconciliation of historical uncertain approvals.
 
 ### Environment safety switch
 
