@@ -6,7 +6,6 @@ use App\Mcp\Authorization\McpAuthorizationService;
 use App\Mcp\Authorization\McpToolPermissionRegistry;
 use App\Mcp\Server\McpServerFactory;
 use App\Mcp\Tools\Crm\CrmMcpCapabilityRegistrar;
-use App\Models\Customer;
 use App\Models\CustomerContract;
 use App\Models\CustomerInteraction;
 use App\Models\CustomerLead;

@@ -66,6 +66,34 @@ final class McpDirectWriteServiceTest extends TestCase
         $this->assertDatabaseHas('mcp_execution_audits', ['event_type' => 'direct_write_execution', 'status' => 'succeeded']);
     }
 
+    public function test_completed_replay_survives_a_permission_matrix_version_change(): void
+    {
+        $principal = User::factory()->create();
+        $permission = $this->permission();
+        $arguments = ['value' => 'same request', 'idempotency_key' => 'direct-write-version-replay-1'];
+        config(['mcp.permission_matrix_version' => '1.8.0']);
+
+        $first = app(McpDirectWriteService::class)->execute(
+            $principal,
+            $permission,
+            $arguments,
+            static fn () => null,
+            static fn (): array => ['record_id' => 42],
+        );
+
+        config(['mcp.permission_matrix_version' => '1.9.0']);
+        $second = app(McpDirectWriteService::class)->execute(
+            $principal,
+            $permission,
+            $arguments,
+            static fn () => null,
+            static fn (): array => ['record_id' => 99],
+        );
+
+        $this->assertSame($first, $second);
+        $this->assertDatabaseCount('mcp_direct_write_executions', 1);
+    }
+
     public function test_idempotency_key_cannot_be_reused_with_a_different_payload(): void
     {
         $principal = User::factory()->create();

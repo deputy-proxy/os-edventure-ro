@@ -48,11 +48,15 @@ final class McpDirectWriteService
         }
 
         $toolVersion = (string) config('mcp.permission_matrix_version', '1.0.0');
-        $payloadHash = $this->canonicalizer->hash($permission->toolName, $toolVersion, null, null, $arguments);
         $existing = $this->findExisting($principal, $clientId, $permission->toolName, $key);
         if ($existing !== null) {
-            return $this->replayOrReject($existing, $payloadHash);
+            return $this->replayOrReject(
+                $existing,
+                $this->canonicalizer->hash($permission->toolName, $existing->tool_version, null, null, $arguments),
+            );
         }
+
+        $payloadHash = $this->canonicalizer->hash($permission->toolName, $toolVersion, null, null, $arguments);
 
         $validator();
 
@@ -76,7 +80,10 @@ final class McpDirectWriteService
                 throw $exception;
             }
 
-            return $this->replayOrReject($existing, $payloadHash);
+            return $this->replayOrReject(
+                $existing,
+                $this->canonicalizer->hash($permission->toolName, $existing->tool_version, null, null, $arguments),
+            );
         }
 
         $audit = $this->audit->recordEvent('direct_write_execution', [

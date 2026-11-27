@@ -331,12 +331,17 @@ abstract class AuthorizedMcpCapabilityRegistrar implements McpCapabilityRegistra
         }
 
         $service = app(\App\Services\Mcp\McpDirectWriteService::class);
+        $authorization = $this->authorization;
         $handler = static fn (User $principal, array $arguments): array => $service->execute(
             $principal,
             $permission,
             $arguments,
             static fn () => $validator($principal, $arguments),
-            static fn (): array => $executor($principal, $arguments),
+            static function () use ($principal, $arguments, $executor, $authorization, $permission): array {
+                $authorization->authorizeTool($principal, $permission);
+
+                return $executor($principal, $arguments);
+            },
         );
 
         $builder->addTool(
