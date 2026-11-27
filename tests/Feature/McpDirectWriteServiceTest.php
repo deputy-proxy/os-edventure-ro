@@ -8,10 +8,12 @@ use App\Models\Mcp\McpDirectWriteExecution;
 use App\Models\Mcp\McpExecutionAudit;
 use App\Models\User;
 use App\Services\Mcp\McpDirectWriteService;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
+use LogicException;
 use RuntimeException;
 use Tests\TestCase;
 
@@ -205,7 +207,7 @@ final class McpDirectWriteServiceTest extends TestCase
                 static fn (): array => ['record_id' => 42],
             );
             $this->fail('A disabled direct-write environment must reject execution.');
-        } catch (\Illuminate\Auth\Access\AuthorizationException) {
+        } catch (AuthorizationException) {
             $this->assertDatabaseCount('mcp_direct_write_executions', 0);
             $this->assertDatabaseCount('mcp_execution_audits', 0);
         }
@@ -225,7 +227,7 @@ final class McpDirectWriteServiceTest extends TestCase
             executionMode: 'approval',
         );
 
-        $this->expectException(\LogicException::class);
+        $this->expectException(LogicException::class);
 
         app(McpDirectWriteService::class)->execute(
             $principal,
