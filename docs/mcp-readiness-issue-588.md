@@ -34,9 +34,9 @@ The one-year duration is approved. The exact technical purge workflow, treatment
 
 ### Independent reviewer
 
-The project owner designated **Diana (os-edventure-ro user ID 3)** as the independent reviewer on 2026-11-27.
+The project owner designated **Contes (GitHub account)** as the independent reviewer on 2026-11-27, replacing the earlier designation of Diana (os-edventure-ro user ID 3).
 
-**Review status: pending.** Diana must review the complete staging evidence after the acceptance suite has run. Before recording sign-off, verify that the account is authorized for the review and that Diana is independent of the test operator and AI principal. The designation is not itself a review or approval, and no GitHub account identity is inferred from the internal user ID.
+**Review status: pending.** Contes must submit the formal GitHub review on PR #608 after the complete staging evidence is available. Before recording sign-off, verify that the Contes GitHub account is authorized for the review and that the reviewer is independent of the test operator and AI principal. The GitHub review must identify the commit reviewed, evidence examined, findings, limitations, and explicit verdict. The designation and review request are not themselves a review or approval.
 
 ### Field, audience, and record-scope evidence
 
@@ -89,14 +89,14 @@ The existing tests/Feature/McpApprovalWorkflowTest.php result (22 tests, 69 asse
 - Run date and operator: **Pending**
 - Acceptance report and per-case evidence: **Pending**
 - Failed cases and remediation: **Pending**
-- Independent reviewer: **Diana, user ID 3 (designated; sign-off pending)**
+- Independent reviewer: **Contes (GitHub account; designated, formal review pending)**
 - Reviewer decision/date/evidence reference: **Pending**
 
 Do not mark the suite passed until every case has a recorded result from the isolated staging environment.
 
 ## 4. Independent review and release gate
 
-Diana must inspect the complete staging report, verify the separation of duties, confirm that the tests ran only against the isolated synthetic staging environment, and record a signed release-readiness decision with date, role, evidence reference, and any conditions.
+Contes must inspect the complete staging report, verify the separation of duties, confirm that the tests ran only against the isolated synthetic staging environment, and submit a formal GitHub review on PR #608. The review must state the commit SHA, evidence examined, findings, limitations, explicit verdict, and any conditions. Link that review from issue #588.
 
 The project owner must make a separate explicit decision before any production controlled-write enablement, after reviewing the exact tools, permissions, fields, environment change, retention implementation, passing staging report, and independent reviewer decision.
 
@@ -111,7 +111,7 @@ Until that separate owner decision exists, production writes remain disabled. A 
 | Field, audience, and record-scope documentation | **Linked to committed permission matrix and domain contracts; test evidence remains part of acceptance** |
 | Privacy/access tests for allowed and denied cases | **Repository coverage to be verified by CI; staging evidence pending** |
 | All autonomous direct-write scenarios pass in isolated staging | **Pending** |
-| Independent authorized human review | **Diana (user ID 3) designated; sign-off pending** |
+| Independent authorized human review | **Contes (GitHub account) designated; formal review pending** |
 | Separate project-owner decision on production enablement | **Not granted; production writes remain disabled** |
 
 Issue #588 must remain open until the staging suite, independent review, and remaining technical retention evidence are complete. No production data changes or new sensitive-field exposure are authorized by this issue.
