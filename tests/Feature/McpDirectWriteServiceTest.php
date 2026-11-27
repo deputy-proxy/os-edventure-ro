@@ -23,7 +23,7 @@ final class McpDirectWriteServiceTest extends TestCase
     {
         parent::setUp();
 
-        config(['app.key' => 'base64:'.base64_encode(random_bytes(32))]);
+        config(['app.key' => 'base64:'.base64_encode(random_bytes(32)), 'mcp.direct_writes_enabled' => true]);
         request()->attributes->set('oauth_client_id', (string) Str::uuid());
         request()->attributes->set('request_id', 'direct-write-test-request');
     }

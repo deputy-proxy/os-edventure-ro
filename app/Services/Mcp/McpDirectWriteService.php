@@ -6,10 +6,12 @@ use App\Mcp\Authorization\McpToolPermission;
 use App\Models\Mcp\McpDirectWriteExecution;
 use App\Models\Mcp\McpExecutionAudit;
 use App\Models\User;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
+use LogicException;
 use Throwable;
 
 final class McpDirectWriteService
@@ -32,6 +34,14 @@ final class McpDirectWriteService
         callable $validator,
         callable $executor,
     ): array {
+        if ($permission->operationType !== 'write' || $permission->executionMode !== 'direct' || $permission->requiresApproval) {
+            throw new LogicException('The direct-write service accepts only autonomous write permissions.');
+        }
+
+        if (! (bool) config('mcp.direct_writes_enabled', false)) {
+            throw new AuthorizationException('Autonomous MCP writes are disabled for this environment.');
+        }
+
         $key = $arguments['idempotency_key'] ?? null;
         if (! is_string($key) || ! preg_match('/^[A-Za-z0-9._:-]{1,128}$/D', $key)) {
             throw ValidationException::withMessages(['idempotency_key' => 'A valid idempotency_key is required for MCP writes.']);
