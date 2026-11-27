@@ -17,6 +17,7 @@ use Hexters\HexaLite\Models\HexaRole;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Testing\TestResponse;
 use Laravel\Passport\Passport;
 use Tests\TestCase;
@@ -295,6 +296,9 @@ final class McpProcessToolsTest extends TestCase
     public function test_process_factory_matches_the_persisted_process_definition_schema(): void
     {
         $role = $this->grant(['process.index']);
+
+        $this->assertTrue(Schema::hasColumn('processes', 'owner_id'));
+        $this->assertFalse(Schema::hasColumn('processes', 'owner'));
 
         $process = Process::factory()->create();
 
