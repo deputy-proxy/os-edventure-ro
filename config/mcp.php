@@ -77,6 +77,7 @@ return [
     'ai_principal_email' => env('MCP_AI_PRINCIPAL_EMAIL'),
     'permission_matrix_version' => '1.8.0',
     'legacy_approval_mode_enabled' => false,
+    'direct_writes_enabled' => (bool) env('MCP_DIRECT_WRITES_ENABLED', false),
     'domain_permission_guard' => env('MCP_DOMAIN_PERMISSION_GUARD', config('auth.defaults.guard', 'web')),
     'principal_role' => 'Assistant',
     'capability_registrars' => [

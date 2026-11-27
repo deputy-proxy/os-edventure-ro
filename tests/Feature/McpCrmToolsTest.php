@@ -16,7 +16,6 @@ use App\Services\CustomerLeadAttributionHistory;
 use Hexters\HexaLite\Models\HexaRole;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
 use Illuminate\Testing\TestResponse;
@@ -39,6 +38,7 @@ class McpCrmToolsTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        config(['mcp.direct_writes_enabled' => true]);
 
         $this->keyPath = storage_path('framework/testing/mcp-crm-passport');
         File::ensureDirectoryExists($this->keyPath, 0700, true);

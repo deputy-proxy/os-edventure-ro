@@ -220,3 +220,7 @@ The fourteen #539 tools are read-only and use dedicated scopes. HR/payroll and a
 | `get_group_operations` | `mcp.academic.groups.read` | `group.index`, `session.index` |
 
 The project owner authorized development across all four domains on 2026-11-22. This authorization is recorded in issue #539. It does not authorize unrestricted personal-data disclosure or production enablement. The tools expose aggregate-only HR and academic data, omit bank details, salary/payslip lines, personal identifiers, sensitive HR notes and individual student records, and preserve source/provenance and currency boundaries. Production rollout remains subject to review of exact fields, audience and retention. See [MCP extended domain tools](mcp-extended-domain-tools.md) for complete field and suppression rules.
+
+## Direct-write environment gate
+
+The direct-write tools are registered in the permission matrix, but the runtime rejects execution unless MCP_DIRECT_WRITES_ENABLED is explicitly true for that environment. The default is false. This is independent of OAuth scopes and domain permissions: all authorization checks still apply when the switch is enabled. This PR does not set the switch in staging or production. The legacy approval execution mode is disabled by default and is retained only for compatibility tests and historical records.

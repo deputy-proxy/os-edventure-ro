@@ -38,6 +38,7 @@ class McpOperationsToolsTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        config(['mcp.direct_writes_enabled' => true]);
 
         $this->keyPath = storage_path('framework/testing/mcp-operations-passport');
         File::ensureDirectoryExists($this->keyPath, 0700, true);
@@ -400,6 +401,27 @@ class McpOperationsToolsTest extends TestCase
         $taskDetail = $this->callTool('get_task_details', ['task_id' => 999999], $session)
             ->assertOk()->json('result.structuredContent');
         $this->assertSame('unavailable_task_not_found', $taskDetail['availability']);
+    }
+
+    public function test_direct_writes_are_blocked_when_the_environment_switch_is_off(): void
+    {
+        $this->grant(['task.create', 'project.index', 'project_phase.index']);
+        config(['mcp.direct_writes_enabled' => false]);
+        $project = Project::factory()->create();
+        $phase = ProjectPhase::factory()->create(['project_id' => $project->getKey()]);
+
+        $response = $this->callTool('create_task', [
+            'action' => 'Must not be created',
+            'description' => 'Environment writes are disabled.',
+            'project_id' => $project->getKey(),
+            'project_phase_id' => $phase->getKey(),
+            'due_date' => '2026-12-15',
+            'idempotency_key' => 'task-disabled-environment-1',
+        ], $this->initialize())->assertOk();
+
+        $this->assertArrayHasKey('error', $response->json());
+        $this->assertSame(0, Task::query()->count());
+        $this->assertSame(0, McpDirectWriteExecution::query()->count());
     }
 
     public function test_task_writes_execute_directly_with_idempotent_replay(): void

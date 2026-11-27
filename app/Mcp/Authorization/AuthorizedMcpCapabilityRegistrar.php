@@ -332,17 +332,23 @@ abstract class AuthorizedMcpCapabilityRegistrar implements McpCapabilityRegistra
 
         $service = app(\App\Services\Mcp\McpDirectWriteService::class);
         $authorization = $this->authorization;
-        $handler = static fn (User $principal, array $arguments): array => $service->execute(
-            $principal,
-            $permission,
-            $arguments,
-            static fn () => $validator($principal, $arguments),
-            static function () use ($principal, $arguments, $executor, $authorization, $permission): array {
-                $authorization->authorizeTool($principal, $permission);
+        $handler = function (User $principal, array $arguments) use ($service, $permission, $validator, $executor, $authorization): array {
+            if (! (bool) config('mcp.direct_writes_enabled', false)) {
+                throw new AuthorizationException('Autonomous MCP writes are disabled for this environment.');
+            }
 
-                return $executor($principal, $arguments);
-            },
-        );
+            return $service->execute(
+                $principal,
+                $permission,
+                $arguments,
+                static fn () => $validator($principal, $arguments),
+                static function () use ($principal, $arguments, $executor, $authorization, $permission): array {
+                    $authorization->authorizeTool($principal, $permission);
+
+                    return $executor($principal, $arguments);
+                },
+            );
+        };
 
         $builder->addTool(
             handler: $this->wrapAuthorizedHandler($permission, $handler),

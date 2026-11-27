@@ -37,6 +37,7 @@ final class McpProcessToolsTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        config(['mcp.direct_writes_enabled' => true]);
 
         config(['app.key' => 'base64:'.base64_encode(random_bytes(32))]);
 

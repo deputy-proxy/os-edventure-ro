@@ -289,3 +289,12 @@ The active write contract is one MCP call per operation. The nine supported writ
 The application records each direct execution in `mcp_direct_write_executions` and the privacy-safe `mcp_execution_audits` trail. Matching completed retries return the original result. Payload collisions are rejected. Executions marked uncertain must be reconciled against the domain record and audit history; never replay them automatically.
 
 Historical approval records, review pages and the expiry/recovery scheduler remain available for existing records. They do not gate new direct writes. Production write enablement remains a separate deployment decision and is not authorized by this code change.
+
+
+### Environment safety switch
+
+Direct-write tools are registered with their authorization and audit boundaries, but execution is blocked unless MCP_DIRECT_WRITES_ENABLED=true is explicitly configured for that environment. The default is false. Do not enable it in production as part of this PR. Staging activation requires its own explicit authorization after the synthetic-data acceptance tests and reconciliation of historical uncertain approvals.
+
+### Environment safety switch
+
+Direct-write tools are registered with their authorization and audit boundaries, but execution is blocked unless MCP_DIRECT_WRITES_ENABLED=true is explicitly configured for that environment. The default is false. This PR does not enable the switch in staging or production. Staging activation requires separate explicit authorization after synthetic-data acceptance tests and reconciliation of historical uncertain approvals. Production activation remains a separate decision.
