@@ -35,6 +35,7 @@ final class McpApprovalWorkflowTest extends TestCase
             'mcp.ai_principal_email' => 'chatgpt@edventure.ro',
             'mcp.domain_permission_guard' => 'web',
             'mcp.permission_matrix_version' => '1.0.0',
+            'mcp.legacy_approval_mode_enabled' => true,
             'mcp.approval_ttl_minutes' => 15,
             'mcp.approval_max_payload_bytes' => 65536,
             'mcp.execution_stale_minutes' => 5,
@@ -45,6 +46,7 @@ final class McpApprovalWorkflowTest extends TestCase
                     'record_scope' => McpGlobalRecordScope::class,
                     'allowed_fields' => ['approval_id' => true, 'status' => true, 'expires_at' => true, 'preview_summary' => true, 'task_id' => true, 'title' => true],
                     'operation_type' => 'write',
+                    'execution_mode' => 'approval',
                     'requires_approval' => true,
                 ],
             ],
@@ -482,7 +484,7 @@ final class McpApprovalWorkflowTest extends TestCase
 
     public function test_approval_service_rejects_tools_not_marked_as_approval_required_writes(): void
     {
-        config(['mcp.tool_permissions.create_task.operation_type' => 'read', 'mcp.tool_permissions.create_task.requires_approval' => false]);
+        config(['mcp.tool_permissions.create_task.operation_type' => 'read', 'mcp.tool_permissions.create_task.requires_approval' => false, 'mcp.tool_permissions.create_task.execution_mode' => 'none']);
         $principal = $this->principal();
         Passport::actingAs($principal, ['mcp:use', 'mcp.operations.tasks.write']);
 

@@ -4,7 +4,7 @@
 
 The process capability exposes existing process definitions as descriptive management content. It does not execute process steps, evaluate conditions, advance a process state, create tasks automatically, or run a workflow engine.
 
-The registry adds four read tools and three approval-gated write operations (each with a request and execution tool).
+The registry adds four read tools and three autonomous direct-write tools.
 
 ## Tools and permissions
 
@@ -14,9 +14,9 @@ The registry adds four read tools and three approval-gated write operations (eac
 | `get_process_details` | `mcp.processes.detail.read` | `process.index` |
 | `get_process_steps` | `mcp.processes.steps.read` | `process.index` |
 | `get_process_tasks` | `mcp.processes.tasks.read` | `process.index`, `task.index` |
-| `create_process` / `execute_create_process` | `mcp.processes.create.request` / `mcp.processes.create.execute` | `process.create` |
-| `update_process` / `execute_update_process` | `mcp.processes.update.request` / `mcp.processes.update.execute` | `process.update` |
-| `delete_process` / `execute_delete_process` | `mcp.processes.delete.request` / `mcp.processes.delete.execute` | `process.delete` |
+| `create_process` | `mcp.processes.create` | `process.create` |
+| `update_process` | `mcp.processes.update` | `process.update` |
+| `delete_process` | `mcp.processes.delete` | `process.delete` |
 
 The AI principal receives no permissions automatically. Operators must explicitly review and assign only the permissions appropriate to the deployment. `get_process_tasks` additionally applies the existing task scope; `task.view_all` expands that task scope only when granted.
 
@@ -51,17 +51,13 @@ The `get_process_steps` tool returns these stored blocks without interpreting th
 
 Restricted or nonexistent process IDs return the same unavailable response; counts and pagination metadata are calculated only after process visibility has been applied.
 
-## Approval-gated writes
+## Direct process writes
 
-All writes require a distinct authorized human reviewer in the os-edventure-ro approval UI:
+All three process writes execute in one MCP call. The caller supplies the complete business arguments and a required idempotency_key; no approval request or approval ID is involved.
 
-1. `create_process`, `update_process`, or `delete_process` validates the request and creates a pending, encrypted, payload-bound approval. It does not mutate the process table.
-2. A human reviewer approves the exact preview and payload.
-3. The matching `execute_*` tool accepts only `approval_id` and executes the stored payload through `McpApprovalService`.
+Create validates the employee owner, visible role IDs, and stored step-block structure. Update accepts only title, description, steps, owner, main topic, and visibility. Update and delete require expected_updated_at; the workflow locks the record and rejects stale versions. Every write re-checks the principal's current role visibility. Delete is soft-delete only.
 
-Create validates the employee owner, visible role IDs, and stored step-block structure. Update accepts only title, description, steps, owner, main topic, and visibility. Update and delete require `expected_updated_at`; execution locks the record and rejects stale versions. Update/delete also re-check the principal's current role visibility at execution time. Delete is soft-delete only.
-
-The approval preview excludes process descriptions and step contents. Execution results are limited to the process ID, title/status, and timestamps. The audit trail stores the existing privacy-safe approval/execution metadata; raw arguments remain encrypted in the approval record.
+The direct-write ledger stores the canonical payload hash and encrypted result. Matching completed retries return the original result, changed payloads are rejected, and executing or uncertain keys cannot be replayed automatically. Audit events contain safe operation metadata, never raw process descriptions or step contents.
 
 ## Regression coverage
 
@@ -71,7 +67,7 @@ Run:
 php artisan test tests/Feature/McpProcessToolsTest.php
 ~~~
 
-The feature suite covers tool registration and closed schemas, role visibility, owner non-bypass, soft-deleted reads, stored step fidelity, task-level scoping, independent human approval, immutable payload execution, visibility revocation after approval, and rejection of unsupported process block types.
+The feature suite covers tool registration and closed schemas, role visibility, owner non-bypass, soft-deleted reads, stored step fidelity, task-level scoping, direct one-call execution, idempotent replay, visibility enforcement, and rejection of unsupported process block types.
 
 
 ## Representative calls
@@ -100,7 +96,7 @@ Read the stored blocks for an already-visible definition:
 }
 ~~~
 
-Request creation approval. The example uses illustrative IDs only:
+Create a process definition directly. The example uses illustrative IDs only:
 
 ~~~json
 {
@@ -134,18 +130,21 @@ Request creation approval. The example uses illustrative IDs only:
 }
 ~~~
 
-The request returns a pending approval identifier and does not create a process. After a separate authorized human approves it in the Management-OS UI, execute only by approval ID:
+The direct call returns the created process ID and a safe result summary. Updates and deletes are also one-call operations; include the current updated_at value as expected_updated_at and a fresh idempotency_key:
 
 ~~~json
 {
-  "name": "execute_create_process",
+  "name": "update_process",
   "arguments": {
-    "approval_id": 456
+    "process_id": 456,
+    "expected_updated_at": "2026-11-27T10:00:00+02:00",
+    "title": "Updated onboarding procedure",
+    "idempotency_key": "process-update-001"
   }
 }
 ~~~
 
-For updates and deletes, include the process's current updated_at value as expected_updated_at in the request. The execution companion still accepts only approval_id.
+For updates and deletes, include the process's current updated_at value as expected_updated_at in the request. The direct update call accepts the business fields and the current expected_updated_at value.
 
 ## Related application code
 
@@ -156,3 +155,7 @@ For updates and deletes, include the process's current updated_at value as expec
 - [Task/project relationship notes](tasks-and-projects.md)
 - [MCP approval and audit controls](mcp-approvals-and-audit.md)
 - [MCP operations tools](mcp-operations-tools.md)
+
+## Direct execution
+
+Each process write is a single MCP call with the complete validated business arguments and a required `idempotency_key`. No approval request or execution companion is published. The direct-write ledger prevents duplicate creation, rejects payload collisions, and blocks automatic replay of uncertain outcomes. Process definitions remain descriptive only; these tools never execute process steps or create tasks.

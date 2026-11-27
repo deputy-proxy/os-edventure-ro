@@ -46,7 +46,7 @@ final class ProcessMcpCapabilityRegistrar extends AuthorizedMcpCapabilityRegistr
 
     private function registerWriteTools(McpBuilder $builder, ProcessWorkflow $workflow): void
     {
-        $this->addApprovalRequestTool(
+        $this->addDirectWriteDefinition(
             $builder,
             'create_process',
             function (User $user, array $arguments) use ($workflow): array {
@@ -71,7 +71,7 @@ final class ProcessMcpCapabilityRegistrar extends AuthorizedMcpCapabilityRegistr
             $this->schema('create_process'),
         );
 
-        $this->addApprovalRequestTool(
+        $this->addDirectWriteDefinition(
             $builder,
             'update_process',
             function (User $user, array $arguments) use ($workflow): array {
@@ -98,7 +98,7 @@ final class ProcessMcpCapabilityRegistrar extends AuthorizedMcpCapabilityRegistr
             $this->schema('update_process'),
         );
 
-        $this->addApprovalRequestTool(
+        $this->addDirectWriteDefinition(
             $builder,
             'delete_process',
             function (User $user, array $arguments) use ($workflow): array {
@@ -122,7 +122,7 @@ final class ProcessMcpCapabilityRegistrar extends AuthorizedMcpCapabilityRegistr
             $this->schema('delete_process'),
         );
 
-        $this->addApprovedExecutionTool(
+        $this->addDirectWriteExecutor(
             $builder,
             'execute_create_process',
             'create_process',
@@ -130,11 +130,11 @@ final class ProcessMcpCapabilityRegistrar extends AuthorizedMcpCapabilityRegistr
                 $user,
                 fn (): array => $workflow->create(Arr::except($arguments, ['idempotency_key'])),
             ),
-            'Executes an approved process-definition creation using its immutable approved payload.',
+            'Creates a descriptive process definition in one call. It does not execute process steps.',
             $this->schema('execute_create_process'),
         );
 
-        $this->addApprovedExecutionTool(
+        $this->addDirectWriteExecutor(
             $builder,
             'execute_update_process',
             'update_process',
@@ -142,11 +142,11 @@ final class ProcessMcpCapabilityRegistrar extends AuthorizedMcpCapabilityRegistr
                 $user,
                 fn (): array => $workflow->update($user, Arr::except($arguments, ['idempotency_key'])),
             ),
-            'Executes an approved process-definition update using its immutable approved payload.',
+            'Updates a descriptive process definition in one call after checking its current version.',
             $this->schema('execute_update_process'),
         );
 
-        $this->addApprovedExecutionTool(
+        $this->addDirectWriteExecutor(
             $builder,
             'execute_delete_process',
             'delete_process',
@@ -154,7 +154,7 @@ final class ProcessMcpCapabilityRegistrar extends AuthorizedMcpCapabilityRegistr
                 $user,
                 fn (): array => $workflow->delete($user, Arr::except($arguments, ['idempotency_key'])),
             ),
-            'Executes an approved soft deletion using its immutable approved payload.',
+            'Soft-deletes a descriptive process definition in one call after checking its current version.',
             $this->schema('execute_delete_process'),
         );
     }

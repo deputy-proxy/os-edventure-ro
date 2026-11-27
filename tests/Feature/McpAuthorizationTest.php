@@ -41,7 +41,7 @@ class McpAuthorizationTest extends TestCase
     {
         parent::setUp();
 
-        config(['mcp.ai_principal_email' => 'chatgpt@edventure.ro']);
+        config(['mcp.ai_principal_email' => 'chatgpt@edventure.ro', 'mcp.legacy_approval_mode_enabled' => true]);
         $keyPath = storage_path('framework/testing/mcp-authorization-keys');
         File::ensureDirectoryExists($keyPath, 0700, true);
         $privateKeyPath = $keyPath.'/oauth-private.key';
@@ -481,6 +481,7 @@ class McpAuthorizationTest extends TestCase
                     'preview_summary' => true,
                 ],
                 'operation_type' => 'write',
+                'execution_mode' => 'approval',
                 'requires_approval' => true,
             ],
         ]]);
@@ -530,6 +531,7 @@ class McpAuthorizationTest extends TestCase
                     'preview_summary' => true,
                 ],
                 'operation_type' => 'write',
+                'execution_mode' => 'approval',
                 'requires_approval' => true,
             ],
             'execute_create_task' => [
@@ -542,6 +544,7 @@ class McpAuthorizationTest extends TestCase
                     'domain_event_reference' => true,
                 ],
                 'operation_type' => 'write',
+                'execution_mode' => 'approval',
                 'requires_approval' => true,
             ],
         ]]);
@@ -613,6 +616,7 @@ class McpAuthorizationTest extends TestCase
                 'record_scope' => McpGlobalRecordScope::class,
                 'allowed_fields' => ['id' => true],
                 'operation_type' => 'write',
+                'execution_mode' => 'approval',
                 'requires_approval' => true,
             ],
         ]]);
