@@ -48,6 +48,17 @@ final class McpToolPermissionRegistry
                 throw new InvalidArgumentException("MCP tool [{$toolName}] must explicitly declare operation_type as read or write.");
             }
 
+            if (($definition['operation_type'] ?? null) === 'write') {
+                if (! array_key_exists('execution_mode', $definition)) {
+                    throw new InvalidArgumentException("MCP write tool [{$toolName}] must explicitly declare execution_mode=direct.");
+                }
+
+                $mode = $definition['execution_mode'];
+                if ($mode !== 'direct' && ! ($mode === 'approval' && (bool) config('mcp.legacy_approval_mode_enabled', false))) {
+                    throw new InvalidArgumentException("MCP write tool [{$toolName}] must use direct execution; legacy approval mode is disabled.");
+                }
+            }
+
             $permission = McpToolPermission::fromArray($toolName, $definition);
             if (! class_exists($permission->recordScope) || ! is_subclass_of($permission->recordScope, McpRecordScope::class)) {
                 throw new InvalidArgumentException("The record scope for MCP tool [{$toolName}] is invalid.");

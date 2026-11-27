@@ -14,7 +14,6 @@ use App\Models\CustomerUnitEconomicsRun;
 use App\Models\Mcp\McpApproval;
 use App\Models\User;
 use App\Services\CustomerLeadAttributionHistory;
-use App\Services\Mcp\McpApprovalService;
 use Hexters\HexaLite\Models\HexaRole;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -330,22 +329,6 @@ class McpCrmToolsTest extends TestCase
         $this->assertDatabaseCount('customer_leads', 1);
         $this->assertSame(0, McpApproval::query()->count());
 
-    }
-    private function reviewer(): User
-    {
-        $reviewer = User::factory()->create(['name' => 'MCP CRM Reviewer']);
-        $role = HexaRole::query()->create([
-            'name' => 'MCP CRM Approval Reviewer',
-            'created_by_name' => 'Test',
-            'access' => ['MCP' => ['mcp_approval.approve']],
-            'guard' => (string) config('mcp.domain_permission_guard', 'web'),
-        ]);
-        DB::table('hexa_role_user')->insert([
-            'user_id' => $reviewer->getKey(),
-            'role_id' => $role->getKey(),
-        ]);
-
-        return $reviewer;
     }
 
     private function grant(array $permissions): void

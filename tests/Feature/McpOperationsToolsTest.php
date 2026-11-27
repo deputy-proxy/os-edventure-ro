@@ -14,7 +14,6 @@ use App\Models\ProjectPhase;
 use App\Models\QuarterlyObjective;
 use App\Models\Task;
 use App\Models\User;
-use App\Services\Mcp\McpApprovalService;
 use Hexters\HexaLite\Models\HexaRole;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -44,7 +43,7 @@ class McpOperationsToolsTest extends TestCase
         File::ensureDirectoryExists($this->keyPath, 0700, true);
         $private = $this->keyPath.'/oauth-private.key';
         $public = $this->keyPath.'/oauth-public.key';
-        if (! is_file($private) || ! is_file($public)) {
+        if (is_file($private) === false || is_file($public) === false) {
             $key = openssl_pkey_new(['private_key_bits' => 2048, 'private_key_type' => OPENSSL_KEYTYPE_RSA]);
             $this->assertNotFalse($key);
             $this->assertTrue(openssl_pkey_export($key, $privateKey));
@@ -478,22 +477,6 @@ class McpOperationsToolsTest extends TestCase
         $this->assertArrayHasKey('error', $response->json());
         $this->assertSame('Concurrent human update', $task->fresh()->action);
 
-    }
-    private function reviewer(): User
-    {
-        $reviewer = User::factory()->create(['name' => 'MCP Reviewer']);
-        $role = HexaRole::query()->create([
-            'name' => 'MCP Approval Reviewer',
-            'created_by_name' => 'Test',
-            'access' => ['MCP' => ['mcp_approval.approve']],
-            'guard' => (string) config('mcp.domain_permission_guard', 'web'),
-        ]);
-        DB::table('hexa_role_user')->insert([
-            'user_id' => $reviewer->getKey(),
-            'role_id' => $role->getKey(),
-        ]);
-
-        return $reviewer;
     }
 
     private function grant(array $permissions): void

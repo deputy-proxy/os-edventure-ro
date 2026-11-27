@@ -76,6 +76,7 @@ return [
     'authorization_server' => $authorizationServer === '' ? null : rtrim($authorizationServer, '/'),
     'ai_principal_email' => env('MCP_AI_PRINCIPAL_EMAIL'),
     'permission_matrix_version' => '1.8.0',
+    'legacy_approval_mode_enabled' => false,
     'domain_permission_guard' => env('MCP_DOMAIN_PERMISSION_GUARD', config('auth.defaults.guard', 'web')),
     'principal_role' => 'Assistant',
     'capability_registrars' => [
