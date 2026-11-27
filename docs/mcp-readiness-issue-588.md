@@ -1,7 +1,7 @@
 # MCP autonomous direct-write readiness (#588)
 
 **Status:** governance decisions recorded; repository evidence and acceptance preparation in progress; staging acceptance and independent sign-off pending.
-**Last verified:** 2026-11-27
+**Last verified:** 2026-11-27 (GitHub Actions run #844)
 **Production write enablement:** disabled. This issue and its PR do not authorize production writes or production data changes.
 
 This document is the evidence index for issue #588. The active MCP runtime exposes nine one-call autonomous direct-write tools. The legacy per-operation approval workflow is retained only for historical records and compatibility tests.
@@ -36,7 +36,7 @@ The one-year duration is approved. The exact technical purge workflow, treatment
 
 The project owner designated **Contes (GitHub account)** as the independent reviewer on 2026-11-27, replacing the earlier designation of Diana (os-edventure-ro user ID 3).
 
-**Review status: pending.** Contes must submit the formal GitHub review on PR #608 after the complete staging evidence is available. Before recording sign-off, verify that the Contes GitHub account is authorized for the review and that the reviewer is independent of the test operator and AI principal. The GitHub review must identify the commit reviewed, evidence examined, findings, limitations, and explicit verdict. The designation and review request are not themselves a review or approval.
+**Review status: pending.** Contes must submit the formal GitHub review on PR #608 after the complete staging evidence is available. Before recording sign-off, verify that the Contes GitHub account is authorized for the review and that the reviewer is independent of the test operator and AI principal. The GitHub review must identify the commit reviewed, evidence examined, findings, limitations, and explicit verdict. The designation and review request are not themselves a review or approval. GitHub reviewer request to `contes` was confirmed on PR #608 on 2026-11-27.
 
 ### Field, audience, and record-scope evidence
 
@@ -102,7 +102,11 @@ The project owner must make a separate explicit decision before any production c
 
 Until that separate owner decision exists, production writes remain disabled. A merged PR, green CI run, successful individual write, or staging authorization is not production authorization.
 
-## 5. Current acceptance status
+## 5. CI validation status
+
+GitHub Actions run [#844](https://github.com/deputy-proxy/os-edventure-ro/actions/runs/46071509762), for the current PR head commit, completed successfully on 2026-11-27. All five jobs passed: PHP tests and migrations (including PHPUnit), MySQL migration/integrity regression, MariaDB 11.8.9 migration/integrity regression, PHP static analysis, and frontend build/dependency audit. This validates repository CI only; it does not replace isolated staging acceptance.
+
+## 6. Current acceptance status
 
 | Acceptance criterion | Status |
 | --- | --- |
