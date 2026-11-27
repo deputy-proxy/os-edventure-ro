@@ -12,14 +12,6 @@ class ProcessFactory extends Factory
     /** @var class-string<Process> */
     protected $model = Process::class;
 
-    public function configure(): static
-    {
-        return $this->afterMaking(function (Process $process): void {
-            // Keep the original required column aligned with the canonical owner_id.
-            $process->owner = $process->owner_id;
-        });
-    }
-
     /** @return array<string, mixed> */
     public function definition(): array
     {
