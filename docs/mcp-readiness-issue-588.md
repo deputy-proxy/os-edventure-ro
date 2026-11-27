@@ -60,7 +60,7 @@ The 2026-11-27 staging update records operator-supplied evidence of:
 - no Google Ads, e-Factura, or Slack credentials configured for the staging runtime;
 - the edv.scl.ro queue-worker and scheduler cron jobs removed, with other sites' cron jobs left unchanged.
 
-This evidence is recorded in issue comment 7221525380. It does not establish that the isolation boundary is still unchanged. Re-check the environment identity, database, queue, mail transport, integration credentials, cron inventory, and external network effects immediately before the acceptance suite. Do not start shared-account workers or schedulers as part of the test.
+This evidence is recorded in issue comment 7221525380. A fresh read-only Hostinger account cron inventory check on 2026-11-27 confirmed that no `edv.scl.ro` queue-worker or scheduler entry is currently configured; the listed jobs belong to `cr8or.be`, `scl.ro/ee`, and `easyenglish.ro` and were left unchanged. This verifies the cron portion only. The available hosting API does not expose the running Laravel `APP_ENV`, `MAIL_MAILER`, or the presence/absence of the staging integration credentials in a way that can be safely verified here; those runtime values must be rechecked through an authorized staging operator immediately before the acceptance suite. Do not start shared-account workers or schedulers as part of the test.
 
 The operator separately authorized staging-only testing against the existing edv.scl.ro staging database, asserting that its records are synthetic and backup/restore had been verified (issue comment 7217851320). This is staging-only authorization, not production authorization.
 
@@ -85,7 +85,7 @@ The existing tests/Feature/McpApprovalWorkflowTest.php result (22 tests, 69 asse
 ### Staging execution record
 
 - Staging environment/build: **Pending re-verification**
-- Isolation evidence reference: **Issue comment 7221525380; re-check before run**
+- Isolation evidence reference: **Issue comment 7221525380; account cron inventory rechecked 2026-11-27 (no edv.scl.ro queue/scheduler jobs); APP_ENV, MAIL_MAILER and integration credentials still require operator re-verification**
 - Run date and operator: **Pending**
 - Acceptance report and per-case evidence: **Pending**
 - Failed cases and remediation: **Pending**
