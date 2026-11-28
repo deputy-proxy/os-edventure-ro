@@ -2,15 +2,18 @@
 
 namespace App\Filament\Resources\EmployeeContracts\Tables;
 
+use App\Filament\Resources\Tasks\Actions\TasksAction;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
+use Filament\Actions\ForceDeleteBulkAction;
+use Filament\Actions\RestoreBulkAction;
 use Filament\Tables;
 use Filament\Tables\Table;
-use Relaticle\Comments\Filament\Actions\CommentsAction;
-use App\Filament\Resources\Tasks\Actions\TasksAction;
 use Illuminate\Support\Str;
+use Relaticle\Comments\Filament\Actions\CommentsAction;
+
 class EmployeeContractsTable
 {
     public static function configure(Table $table): Table
@@ -26,6 +29,7 @@ class EmployeeContractsTable
                 Tables\Columns\TextColumn::make('end_date')
                     ->dateTime(),
                 Tables\Columns\TextColumn::make('contract_type'),
+                Tables\Columns\TextColumn::make('compensation_basis')->label('Pay basis')->badge(),
                 Tables\Columns\TextColumn::make('base_salary'),
                 Tables\Columns\TextColumn::make('hourly_rate'),
                 Tables\Columns\TextColumn::make('clauses')
@@ -46,26 +50,26 @@ class EmployeeContractsTable
                             ->filter(fn ($item) => is_array($item) && isset($item['type']))
                             ->count();
 
-                        return $count . ' ' . Str::plural('clause', $count);
+                        return $count.' '.Str::plural('clause', $count);
                     })
                     ->badge()
                     ->color('primary'),
             ])
             ->filters([
-                Tables\Filters\TrashedFilter::make()
+                Tables\Filters\TrashedFilter::make(),
             ])
             ->recordActions([
                 EditAction::make(),
                 DeleteAction::make(),
                 TasksAction::make(),
-                CommentsAction::make()
+                CommentsAction::make(),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
                     DeleteBulkAction::make(),
-                    \Filament\Actions\ForceDeleteBulkAction::make(),
-                    \Filament\Actions\RestoreBulkAction::make()
-                ])
+                    ForceDeleteBulkAction::make(),
+                    RestoreBulkAction::make(),
+                ]),
             ]);
     }
 }

@@ -174,11 +174,64 @@ class PayrollPeriodLifecycleService
     private function currentSnapshot(EmployeePaySlip $paySlip): array
     {
         $record = EmployeePaySlip::query()->with([
-            'lineItems' => fn ($query) => $query->orderBy('id'),
             'calculationRuns' => fn ($query) => $query->orderBy('id'),
             'calculationRuns.inputVersions',
             'calculationRuns.result.items',
         ])->findOrFail($paySlip->getKey());
+
+        if ((int) $record->active_calculation_version > 0) {
+            $sourceItems = $record->lineItems->map(fn (EmployeePaySlipItem $item): array => [
+                'id' => (int) $item->getKey(),
+                'calculation_version' => (int) $item->calculation_version,
+                'item_type' => $item->item_type,
+                'source_type' => $item->source_type,
+                'source_id' => (int) $item->source_id,
+                'occurred_on' => Carbon::parse((string) $item->occurred_on)->toDateString(),
+                'description' => $item->description,
+                'quantity' => (string) $item->quantity,
+                'unit' => $item->unit,
+                'unit_rate' => (string) $item->unit_rate,
+                'amount' => (string) $item->amount,
+                'currency' => $item->currency,
+                'calculation_snapshot' => $item->getAttribute('calculation_snapshot'),
+            ])->all();
+            $lineTotal = round(array_sum(array_map(static fn (array $item): float => (float) $item['amount'], $sourceItems)), 2, PHP_ROUND_HALF_UP);
+            if ((float) $record->manual_amount !== 0.0 || $lineTotal !== (float) $record->amount) {
+                throw ValidationException::withMessages(['gross_calculation' => 'The gross payslip total does not match its active immutable calculation lines. Recalculate the draft before review.']);
+            }
+
+            $calculationHistory = $record->gross_calculation_history ?? [];
+            $activeCalculationSnapshot = collect($calculationHistory)->firstWhere('calculation_version', (int) $record->active_calculation_version) ?? [];
+            if ((int) ($activeCalculationSnapshot['calculation_version'] ?? 0) !== (int) $record->active_calculation_version
+                || round((float) ($activeCalculationSnapshot['gross_total'] ?? -1), 2, PHP_ROUND_HALF_UP) !== $lineTotal) {
+                throw ValidationException::withMessages(['gross_calculation_history' => 'The active gross calculation summary is missing or does not match its immutable line items. Recalculate the draft before review.']);
+            }
+            $data = [
+                'schema_version' => 'gross-payroll-period-approval-v1',
+                'employee_pay_slip' => [
+                    'id' => (int) $record->getKey(),
+                    'employee_id' => (int) $record->employee_id,
+                    'month' => Carbon::parse((string) $record->month)->toDateString(),
+                    'amount' => (string) $record->amount,
+                    'due_on' => $record->due_on ? Carbon::parse((string) $record->due_on)->toDateString() : null,
+                    'source_items' => $sourceItems,
+                ],
+                'gross_calculation' => [
+                    'version' => (int) $record->active_calculation_version,
+                    'formula_version' => (string) ($activeCalculationSnapshot['formula_version'] ?? 'gross-v1'),
+                    'currency' => 'RON',
+                    'gross_total' => (string) $record->amount,
+                    'rounding' => 'Each gross line is rounded half-up to two decimals; the total is the sum of rounded gross lines.',
+                    'calculation_history' => $calculationHistory,
+                    'active_calculation_snapshot' => $activeCalculationSnapshot,
+                    'line_item_ids' => array_column($sourceItems, 'id'),
+                ],
+                'calculation_runs' => [],
+            ];
+            $hash = hash('sha256', json_encode($data, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_PRESERVE_ZERO_FRACTION));
+
+            return ['data' => $data, 'hash' => $hash, 'initiated_by' => null];
+        }
 
         $latestRun = PayrollCalculationRun::query()
             ->with('result')

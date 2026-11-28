@@ -21,6 +21,8 @@ use UnitEnum;
 
 class PayrollPolicyResource extends Resource
 {
+    protected static bool $shouldRegisterNavigation = false;
+
     use HasHexaLite;
 
     protected static ?string $model = PayrollPolicy::class;

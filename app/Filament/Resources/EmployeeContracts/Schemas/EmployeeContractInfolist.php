@@ -2,23 +2,26 @@
 
 namespace App\Filament\Resources\EmployeeContracts\Schemas;
 
-use Filament\Infolists;
+use Filament\Infolists\Components\KeyValueEntry;
+use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Schema;
+
 class EmployeeContractInfolist
 {
     public static function configure(Schema $schema): Schema
     {
         return $schema
             ->components([
-                \Filament\Infolists\Components\TextEntry::make('employee_id'),
-                \Filament\Infolists\Components\TextEntry::make('start_date')
+                TextEntry::make('employee_id'),
+                TextEntry::make('start_date')
                     ->dateTime(),
-                \Filament\Infolists\Components\TextEntry::make('end_date')
+                TextEntry::make('end_date')
                     ->dateTime(),
-                \Filament\Infolists\Components\TextEntry::make('contract_type'),
-                \Filament\Infolists\Components\TextEntry::make('base_salary'),
-                \Filament\Infolists\Components\TextEntry::make('hourly_rate'),
-                \Filament\Infolists\Components\KeyValueEntry::make('clauses')
+                TextEntry::make('compensation_basis')->label('Compensation basis'),
+                TextEntry::make('contract_type'),
+                TextEntry::make('base_salary'),
+                TextEntry::make('hourly_rate'),
+                KeyValueEntry::make('clauses'),
             ]);
     }
 }

@@ -14,6 +14,7 @@ class EmployeePaySlipItem extends Model
 
     protected $fillable = [
         'employee_pay_slip_id',
+        'calculation_version',
         'item_type',
         'source_type',
         'source_id',

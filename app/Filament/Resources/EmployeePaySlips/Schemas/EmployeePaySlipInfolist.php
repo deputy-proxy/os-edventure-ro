@@ -25,8 +25,24 @@ class EmployeePaySlipInfolist
             TextEntry::make('closer.name')->label('Closed by'),
             TextEntry::make('closed_at')->dateTime(),
             TextEntry::make('lifecycle_version')->label('Lifecycle version'),
-            TextEntry::make('manual_amount')->money('RON')->label('Manual Baseline'),
-            TextEntry::make('amount')->money('RON')->label('Calculated Total'),
+            TextEntry::make('active_calculation_version')->label('Active gross calculation version'),
+            TextEntry::make('manual_amount')->money('RON')->label('Legacy manual baseline')->visible(fn ($record): bool => (float) $record->manual_amount !== 0.0),
+            TextEntry::make('amount')->money('RON')->label('Gross compensation total'),
+            Section::make('Gross calculation history')
+                ->visible(fn ($record): bool => ! empty($record->gross_calculation_history))
+                ->schema([
+                    RepeatableEntry::make('gross_calculation_history')->schema([
+                        TextEntry::make('calculation_version')->label('Version'),
+                        TextEntry::make('period'),
+                        TextEntry::make('formula_version'),
+                        TextEntry::make('gross_total')->money('RON'),
+                        TextEntry::make('calculated_at')->dateTime(),
+                        TextEntry::make('contract_segments')->formatStateUsing(fn ($state): string => json_encode($state, JSON_UNESCAPED_SLASHES) ?: '[]')->columnSpanFull(),
+                        TextEntry::make('timesheet_ids')->formatStateUsing(fn ($state): string => implode(', ', $state ?? [])),
+                        TextEntry::make('warnings')->listWithLineBreaks(),
+                        TextEntry::make('medical_leave_date_conflicts')->formatStateUsing(fn ($state): string => json_encode($state, JSON_UNESCAPED_SLASHES) ?: '{}')->columnSpanFull(),
+                    ])->columns(3),
+                ]),
             TextEntry::make('due_on')->date(),
             TextEntry::make('paid_on')->date(),
             Section::make('Payroll period audit history')
@@ -41,8 +57,9 @@ class EmployeePaySlipInfolist
                         TextEntry::make('created_at')->dateTime(),
                     ])->columns(3),
                 ]),
-            Section::make('Versioned payroll calculation snapshots')
-                ->description('Snapshots are immutable. Ready means inputs are present; calculated means only configured arithmetic ran. Neither establishes statutory compliance or payment approval.')
+            Section::make('Historical generic payroll calculation runs')
+                ->visible(fn ($record): bool => $record->calculationRuns()->exists())
+                ->description('Legacy calculation runs are retained for audit. They are not used by the active gross-compensation workflow.')
                 ->schema([
                     RepeatableEntry::make('calculationRuns')->schema([
                         TextEntry::make('id')->label('Run ID'),
@@ -95,6 +112,7 @@ class EmployeePaySlipInfolist
                     ])->columns(4),
                 ]),
             Section::make('Legacy payroll breakdown')
+                ->visible(fn ($record): bool => ! empty($record->items))
                 ->description('Existing JSON breakdown retained for historical compatibility.')
                 ->schema([TextEntry::make('items')->formatStateUsing(fn ($state): string => json_encode($state, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) ?: '[]')->columnSpanFull()]),
         ]);

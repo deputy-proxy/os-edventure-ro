@@ -3,46 +3,51 @@
 namespace App\Models;
 
 use App\Models\Concerns\HasPanelSearchTitle;
-
-use Illuminate\Database\Eloquent\Model;
+use App\Models\Concerns\HasTasks;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Relaticle\Comments\Concerns\HasComments;
 use Relaticle\Comments\Contracts\Commentable;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Spatie\Activitylog\Models\Activity;
 use Spatie\Activitylog\Models\Concerns\LogsActivity;
 use Spatie\Activitylog\Support\LogOptions;
-use Spatie\Activitylog\Models\Activity;
-
-use App\Models\Concerns\HasTasks;
 
 class EmployeeContract extends Model implements Commentable
 {
-    use HasPanelSearchTitle;
+    public const BASIS_MONTHLY = 'monthly';
 
-    use LogsActivity;
-    use HasFactory;
-    use SoftDeletes;
+    public const BASIS_HOURLY = 'hourly';
+
+    public const COMPENSATION_BASES = [self::BASIS_MONTHLY => 'Monthly salary', self::BASIS_HOURLY => 'Hourly rate'];
+
     use HasComments;
+    use HasFactory;
+    use HasPanelSearchTitle;
     use HasTasks;
+    use LogsActivity;
+    use SoftDeletes;
 
     protected function casts(): array
     {
         return ['clauses' => 'array', 'base_salary' => 'decimal:2', 'hourly_rate' => 'decimal:2'];
     }
 
-    public function tasks(): \Illuminate\Database\Eloquent\Relations\MorphMany
+    public function tasks(): MorphMany
     {
         return $this->morphMany(Task::class, 'taskable');
     }
 
-    public function activities(): \Illuminate\Database\Eloquent\Relations\MorphMany
+    public function activities(): MorphMany
     {
         return $this->morphMany(Activity::class, 'subject');
     }
 
-/** @var array<int, string> */
-    protected $fillable = ['employee_id', 'start_date', 'end_date', 'contract_type', 'base_salary', 'hourly_rate', 'clauses'];
+    /** @var array<int, string> */
+    protected $fillable = ['employee_id', 'start_date', 'end_date', 'contract_type', 'compensation_basis', 'base_salary', 'hourly_rate', 'clauses'];
 
     public function equipmentReimbursementAmount(): ?float
     {
@@ -80,12 +85,12 @@ class EmployeeContract extends Model implements Commentable
         return null;
     }
 
-    public function payrollInputs(): \Illuminate\Database\Eloquent\Relations\HasMany
+    public function payrollInputs(): HasMany
     {
         return $this->hasMany(EmployeeContractPayrollInput::class)->orderByDesc('effective_from');
     }
 
-    public function workerEngagements(): \Illuminate\Database\Eloquent\Relations\HasMany
+    public function workerEngagements(): HasMany
     {
         return $this->hasMany(WorkerEngagement::class);
     }
@@ -97,10 +102,10 @@ class EmployeeContract extends Model implements Commentable
 
     public function getActivitylogOptions(): LogOptions
     {
-        return LogOptions::defaults()->logOnly(['start_date', 'end_date', 'contract_type'])->logOnlyDirty()->dontLogEmptyChanges();
+        return LogOptions::defaults()->logOnly(['start_date', 'end_date', 'contract_type', 'compensation_basis', 'base_salary', 'hourly_rate'])->logOnlyDirty()->dontLogEmptyChanges();
     }
 
-    public function payrollCalculationRuns(): \Illuminate\Database\Eloquent\Relations\HasMany
+    public function payrollCalculationRuns(): HasMany
     {
         return $this->hasMany(PayrollCalculationRun::class);
     }

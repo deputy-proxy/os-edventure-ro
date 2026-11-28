@@ -4,7 +4,6 @@ namespace Tests\Feature;
 
 use App\Models\Employee;
 use App\Models\EmployeeContract;
-use App\Models\EmployeeHoliday;
 use App\Models\EmployeePaySlip;
 use App\Models\Session;
 use App\Models\SessionAssistance;
@@ -23,30 +22,23 @@ class EmployeePaySlipWorkflowTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_monthly_generation_is_idempotent_and_includes_approved_holiday_and_equipment_reimbursement(): void
+    public function test_monthly_generation_is_idempotent_and_creates_only_the_gross_contract_salary(): void
     {
         $employee = Employee::factory()->create();
         $employeeWithoutContract = Employee::factory()->create();
-        $contract = EmployeeContract::factory()->create([
+        EmployeeContract::factory()->create([
             'employee_id' => $employee->id,
             'start_date' => '2024-02-01',
             'end_date' => '2024-12-31',
-            'hourly_rate' => 25,
+            'compensation_basis' => EmployeeContract::BASIS_MONTHLY,
+            'base_salary' => 3100,
             'clauses' => [[
                 'type' => 'use_own_equipment_reimbursement',
                 'data' => ['amount' => 150],
             ]],
         ]);
-        EmployeeHoliday::factory()->create([
-            'employee_id' => $employee->id,
-            'start_date' => '2024-02-28',
-            'end_date' => '2024-02-29',
-            'hours_per_day' => 8,
-            'status' => 'Approved',
-        ]);
 
         $this->artisan('employee-payslips:generate', ['--month' => '2024-02'])->assertSuccessful();
-        $contract->update(['clauses' => [['type' => 'use_own_equipment_reimbursement', 'data' => ['amount' => 200]]]]);
         $this->artisan('employee-payslips:generate', ['--month' => '2024-02'])->assertSuccessful();
 
         $paySlip = EmployeePaySlip::query()->where('employee_id', $employee->id)->firstOrFail();
@@ -54,13 +46,11 @@ class EmployeePaySlipWorkflowTest extends TestCase
         $this->assertSame('Open', $paySlip->status);
         $this->assertNull($paySlip->due_on);
         $this->assertNull($paySlip->paid_on);
-        $this->assertSame(2, $paySlip->lineItems()->count());
+        $this->assertSame(1, $paySlip->lineItems()->count());
         $this->assertDatabaseMissing('employee_pay_slips', ['employee_id' => $employeeWithoutContract->id, 'month' => '2024-02-01']);
-        $this->assertSame('550.00', $paySlip->amount);
-        $this->assertSame('400.00', $paySlip->lineItems()->where('item_type', 'holiday')->value('amount'));
-        $this->assertSame('150.00', $paySlip->lineItems()->where('item_type', 'equipment_reimbursement')->value('amount'));
-        $this->assertSame(150, $paySlip->lineItems()->where('item_type', 'equipment_reimbursement')->firstOrFail()->calculation_snapshot['amount']);
-        $this->assertSame('use_own_equipment_reimbursement', $paySlip->lineItems()->where('item_type', 'equipment_reimbursement')->firstOrFail()->calculation_snapshot['clause_key']);
+        $this->assertSame('3100.00', $paySlip->amount);
+        $this->assertSame('gross_monthly_salary', $paySlip->lineItems()->firstOrFail()->item_type);
+        $this->assertSame(1, $paySlip->active_calculation_version);
     }
 
     public function test_session_item_uses_a_precise_rate_snapshot_and_repeated_action_does_not_duplicate_it(): void

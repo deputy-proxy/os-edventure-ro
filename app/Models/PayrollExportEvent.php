@@ -11,7 +11,7 @@ class PayrollExportEvent extends Model
     public $timestamps = false;
 
     protected $fillable = [
-        'employee_pay_slip_id', 'payroll_calculation_run_id', 'actor_id', 'report_type',
+        'employee_pay_slip_id', 'payroll_calculation_run_id', 'gross_calculation_version', 'actor_id', 'report_type',
         'format', 'row_count', 'approved_snapshot_hash', 'content_sha256', 'created_at',
     ];
 
@@ -19,6 +19,7 @@ class PayrollExportEvent extends Model
     {
         return [
             'row_count' => 'integer',
+            'gross_calculation_version' => 'integer',
             'created_at' => 'immutable_datetime',
         ];
     }

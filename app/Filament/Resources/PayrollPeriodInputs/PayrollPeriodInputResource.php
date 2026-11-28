@@ -16,6 +16,8 @@ use UnitEnum;
 
 class PayrollPeriodInputResource extends Resource
 {
+    protected static bool $shouldRegisterNavigation = false;
+
     use HasHexaLite;
 
     protected static ?string $model = PayrollPeriodInput::class;

@@ -4,13 +4,13 @@ namespace App\Services;
 
 use App\Models\Employee;
 use App\Models\EmployeeContract;
-use App\Models\EmployeeHoliday;
 use App\Models\EmployeePaySlip;
 use App\Models\EmployeePaySlipItem;
 use App\Models\Session;
 use App\Models\SessionAssistance;
 use App\Models\TestSimulation;
 use App\Models\User;
+use App\Services\Payroll\GrossPayrollPayslipService;
 use Carbon\CarbonImmutable;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\DB;
@@ -35,8 +35,8 @@ class EmployeePaySlipService
         foreach ($employeeIds as $employeeId) {
             $created += DB::transaction(function () use ($employeeId, $periodStart, $periodEnd): int {
                 [$paySlip, $wasCreated] = $this->createOrGetForMonth((int) $employeeId, $periodStart, $periodEnd);
-                if ($paySlip->isOpen()) {
-                    $this->addAutomaticItems($paySlip, $periodStart, $periodEnd);
+                if ($paySlip->isOpen() && ($wasCreated || (int) $paySlip->active_calculation_version === 0)) {
+                    app(GrossPayrollPayslipService::class)->calculate(Employee::query()->findOrFail($employeeId), $periodStart);
                 }
 
                 return $wasCreated ? 1 : 0;
@@ -46,18 +46,19 @@ class EmployeePaySlipService
         return $created;
     }
 
-    public function populateAutomaticItems(EmployeePaySlip $paySlip): void
+    public function calculateGrossCompensation(EmployeePaySlip $paySlip): void
     {
         DB::transaction(function () use ($paySlip): void {
             $locked = EmployeePaySlip::query()->whereKey($paySlip->getKey())->lockForUpdate()->firstOrFail();
             if ($locked->isOpen()) {
                 $periodStart = CarbonImmutable::parse($locked->month)->startOfMonth();
-                $this->addAutomaticItems($locked, $periodStart, $periodStart->endOfMonth());
+                app(GrossPayrollPayslipService::class)->calculate(Employee::query()->findOrFail($locked->employee_id), $periodStart);
             }
         });
     }
 
     /** Add a completed source record to its employee's open payslip for the source's calendar month. */
+    /** @deprecated Activity payroll entry now flows through EmployeeTimesheetService. */
     public function addSession(Session $session): array
     {
         $this->rejectCancelled($session->status);
@@ -98,6 +99,7 @@ class EmployeePaySlipService
         );
     }
 
+    /** @deprecated Activity payroll entry now flows through EmployeeTimesheetService. */
     public function addSessionAssistance(SessionAssistance $assistance): array
     {
         if (! in_array(strtolower(trim((string) $assistance->status)), ['complete', 'completed'], true)) {
@@ -145,6 +147,7 @@ class EmployeePaySlipService
         );
     }
 
+    /** @deprecated Activity payroll entry now flows through EmployeeTimesheetService. */
     public function addTestSimulation(TestSimulation $simulation): array
     {
         if (strtolower((string) $simulation->status) !== 'completed') {
@@ -223,8 +226,41 @@ class EmployeePaySlipService
             if (trim($reason) === '' || $amount == 0.0) {
                 throw ValidationException::withMessages(['amount' => 'A non-zero adjustment amount and a reason are required.']);
             }
+            if ((int) $target->active_calculation_version > 0 && $target->allLineItems()->where('source_type', 'employee_pay_slip_item')->where('source_id', $original->getKey())->exists()) {
+                throw ValidationException::withMessages(['source_id' => 'This original payslip item already has a correction recorded on the target period.']);
+            }
 
-            return $this->createItem($target, [
+            $activeVersion = (int) $target->active_calculation_version;
+            $nextVersion = $activeVersion > 0 ? $activeVersion + 1 : 0;
+            $carriedItemIds = [];
+            if ($activeVersion > 0) {
+                foreach ($target->lineItems()->orderBy('id')->get() as $activeItem) {
+                    $carried = EmployeePaySlipItem::query()->create([
+                        'employee_pay_slip_id' => $target->getKey(),
+                        'calculation_version' => $nextVersion,
+                        'item_type' => $activeItem->item_type,
+                        'source_type' => $activeItem->source_type,
+                        'source_id' => $activeItem->source_id,
+                        'period_key' => $activeItem->period_key,
+                        'source_key' => sprintf('gross:v%d:carry:%d:%s', $nextVersion, $activeItem->getKey(), $activeItem->period_key),
+                        'occurred_on' => $activeItem->occurred_on,
+                        'description' => $activeItem->description,
+                        'quantity' => $activeItem->quantity,
+                        'unit' => $activeItem->unit,
+                        'unit_rate' => $activeItem->unit_rate,
+                        'amount' => $activeItem->amount,
+                        'currency' => $activeItem->currency,
+                        'calculation_snapshot' => array_merge($activeItem->calculation_snapshot ?? [], [
+                            'carried_from_item_id' => (int) $activeItem->getKey(),
+                            'carried_to_calculation_version' => $nextVersion,
+                        ]),
+                    ]);
+                    $carriedItemIds[] = (int) $carried->getKey();
+                }
+            }
+
+            $adjustment = $this->createItem($target, [
+                'calculation_version' => $nextVersion,
                 'item_type' => 'adjustment',
                 'source_type' => 'employee_pay_slip_item',
                 'source_id' => (int) $original->getKey(),
@@ -243,6 +279,19 @@ class EmployeePaySlipService
                     'formula' => 'signed manual correction; original item remains immutable',
                 ],
             ]);
+
+            if ($activeVersion > 0 && $adjustment['created']) {
+                $history = (array) ($target->getAttribute('gross_calculation_history') ?? []);
+                $latest = $history === [] ? [] : (array) $history[array_key_last($history)];
+                $latest['gross_total'] = $this->money((float) $target->amount + $amount);
+                $latest['formula_version'] = 'gross-v1-with-adjustments';
+                $latest['adjustment_item_ids'] = [...($latest['adjustment_item_ids'] ?? []), (int) $adjustment['item']->getKey()];
+                $latest['carried_item_ids'] = $carriedItemIds;
+                $latest['calculated_at'] = now()->toIso8601String();
+                $target->activateGrossCalculationVersion($nextVersion, $latest);
+            }
+
+            return $adjustment;
         });
     }
 
@@ -267,8 +316,9 @@ class EmployeePaySlipService
             if (! $paySlip->isOpen()) {
                 throw ValidationException::withMessages(['employee_pay_slip_id' => 'Items can only be added to an Open payslip.']);
             }
-            $this->addAutomaticItems($paySlip, $periodStart, $periodEnd);
-
+            if ((int) $paySlip->active_calculation_version > 0) {
+                throw ValidationException::withMessages(['source' => 'Session and simulation compensation must enter through approved timesheets, not direct payslip items.']);
+            }
             $snapshot['pay_period'] = $occurredAt->format('Y-m');
 
             return $this->createItem($paySlip, [
@@ -302,7 +352,12 @@ class EmployeePaySlipService
             $sourceKey .= ':'.$periodKey;
         }
         $attributes['employee_pay_slip_id'] = $paySlip->getKey();
+        $calculationVersion = (int) ($attributes['calculation_version'] ?? $paySlip->active_calculation_version ?? 0);
+        $attributes['calculation_version'] = $calculationVersion;
         $attributes['period_key'] = $periodKey;
+        if ($calculationVersion > 0) {
+            $sourceKey .= ':v'.$calculationVersion;
+        }
         $attributes['source_key'] = $sourceKey;
 
         $existing = EmployeePaySlipItem::query()->where('source_key', $sourceKey)->first();
@@ -380,106 +435,6 @@ class EmployeePaySlipService
         return [$paySlip, $created];
     }
 
-    private function addAutomaticItems(EmployeePaySlip $paySlip, CarbonImmutable $periodStart, CarbonImmutable $periodEnd): void
-    {
-        if (! $paySlip->isOpen()) {
-            return;
-        }
-
-        $contract = $this->contractForPeriod((int) $paySlip->employee_id, $periodStart, $periodEnd);
-        if ($contract) {
-            $reimbursement = $contract->equipmentReimbursementAmount();
-            if ($reimbursement !== null && $reimbursement > 0) {
-                $this->createItem($paySlip, [
-                    'item_type' => 'equipment_reimbursement',
-                    'source_type' => 'employee_contract',
-                    'source_id' => (int) $contract->getKey(),
-                    'occurred_on' => $periodStart->toDateString(),
-                    'description' => 'Own Equipment Reimbursement',
-                    'quantity' => 1,
-                    'unit' => 'month',
-                    'unit_rate' => $this->money($reimbursement),
-                    'amount' => $this->money($reimbursement),
-                    'currency' => 'RON',
-                    'calculation_snapshot' => [
-                        'contract_id' => $contract->getKey(),
-                        'contract_type' => $contract->contract_type,
-                        'clause_key' => 'use_own_equipment_reimbursement',
-                        'amount' => $reimbursement,
-                        'formula' => 'fixed monthly amount from active EmployeeContract clause',
-                    ],
-                ]);
-            }
-        }
-
-        $holidays = EmployeeHoliday::query()
-            ->where('employee_id', $paySlip->employee_id)
-            ->whereRaw('LOWER(status) = ?', ['approved'])
-            ->whereDate('start_date', '<=', $periodEnd->toDateString())
-            ->whereDate('end_date', '>=', $periodStart->toDateString())
-            ->get();
-
-        foreach ($holidays as $holiday) {
-            [$hours, $amount, $rateBreakdown, $coveredDays] = $this->calculateHoliday($paySlip, $holiday, $periodStart, $periodEnd);
-            if ($hours <= 0) {
-                continue;
-            }
-
-            $this->createItem($paySlip, [
-                'item_type' => 'holiday',
-                'source_type' => 'employee_holiday',
-                'source_id' => (int) $holiday->getKey(),
-                'occurred_on' => $coveredDays[0],
-                'description' => 'Approved Holiday ('.count($coveredDays).' weekdays)',
-                'quantity' => $hours,
-                'unit' => 'hour',
-                'unit_rate' => $this->money($amount / $hours),
-                'amount' => $this->money($amount),
-                'currency' => 'RON',
-                'calculation_snapshot' => [
-                    'holiday_id' => $holiday->getKey(),
-                    'approved_period' => [$holiday->start_date, $holiday->end_date],
-                    'pay_period' => $periodStart->format('Y-m'),
-                    'hours_per_weekday' => (float) $holiday->hours_per_day,
-                    'covered_weekdays' => $coveredDays,
-                    'rate_breakdown' => $rateBreakdown,
-                    'formula' => 'sum(weekday hours * contract hourly_rate), rounded per day to 2 decimals',
-                ],
-            ]);
-        }
-    }
-
-    private function calculateHoliday(EmployeePaySlip $paySlip, EmployeeHoliday $holiday, CarbonImmutable $periodStart, CarbonImmutable $periodEnd): array
-    {
-        $start = CarbonImmutable::parse($holiday->start_date)->max($periodStart);
-        $end = CarbonImmutable::parse($holiday->end_date)->min($periodEnd);
-        $hoursPerDay = (float) $holiday->hours_per_day;
-        $hours = 0.0;
-        $amount = 0.0;
-        $rates = [];
-        $coveredDays = [];
-
-        for ($day = $start; $day->lte($end); $day = $day->addDay()) {
-            if (! $day->isWeekday() || $hoursPerDay <= 0) {
-                continue;
-            }
-
-            $contract = $this->contractForDate((int) $paySlip->employee_id, $day);
-            if (! $contract) {
-                continue;
-            }
-
-            $rate = (float) $contract->hourly_rate;
-            $dayAmount = $this->money($hoursPerDay * $rate);
-            $hours += $hoursPerDay;
-            $amount += $dayAmount;
-            $coveredDays[] = $day->toDateString();
-            $rates[] = ['date' => $day->toDateString(), 'hours' => $hoursPerDay, 'hourly_rate' => $rate, 'amount' => $dayAmount, 'contract_id' => $contract->getKey()];
-        }
-
-        return [$this->quantity($hours), $this->money($amount), $rates, $coveredDays];
-    }
-
     private function contractForDate(int $employeeId, CarbonImmutable $date): EmployeeContract
     {
         $contract = EmployeeContract::query()
@@ -498,17 +453,6 @@ class EmployeePaySlipService
         }
 
         return $contract;
-    }
-
-    private function contractForPeriod(int $employeeId, CarbonImmutable $periodStart, CarbonImmutable $periodEnd): ?EmployeeContract
-    {
-        return EmployeeContract::query()
-            ->where('employee_id', $employeeId)
-            ->whereDate('start_date', '<=', $periodEnd->toDateString())
-            ->whereDate('end_date', '>=', $periodStart->toDateString())
-            ->orderByDesc('start_date')
-            ->orderByDesc('id')
-            ->first();
     }
 
     private function durationHours(CarbonImmutable $start, CarbonImmutable $end): float

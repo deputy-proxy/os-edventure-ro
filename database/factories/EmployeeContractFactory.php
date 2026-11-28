@@ -27,6 +27,7 @@ class EmployeeContractFactory extends Factory
             'start_date' => now()->subMonth()->toDateString(),
             'end_date' => now()->addYear()->toDateString(),
             'contract_type' => 'full_time',
+            'compensation_basis' => EmployeeContract::BASIS_MONTHLY,
             'base_salary' => $this->faker->randomFloat(2, 1000, 10000),
             'hourly_rate' => $this->faker->randomFloat(2, 10, 100),
             'clauses' => [],

@@ -4,6 +4,7 @@ namespace App\Filament\Resources\EmployeeTimesheets\Schemas;
 
 use Filament\Forms;
 use Filament\Schemas\Schema;
+
 class EmployeeTimesheetForm
 {
     public static function configure(Schema $schema): Schema
@@ -23,10 +24,9 @@ class EmployeeTimesheetForm
                     ->required(),
                 Forms\Components\TextInput::make('number_of_hours')
                     ->numeric()
+                    ->minValue(0.01)
+                    ->step('0.25')
                     ->required(),
-                Forms\Components\Select::make('session_id')
-                    ->relationship('session', 'identifier')
-                    ->required()
             ]);
     }
 }

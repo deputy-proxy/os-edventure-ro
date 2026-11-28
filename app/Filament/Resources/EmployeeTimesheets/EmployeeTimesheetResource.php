@@ -2,39 +2,43 @@
 
 namespace App\Filament\Resources\EmployeeTimesheets;
 
+use AlizHarb\ActivityLog\RelationManagers\ActivitiesRelationManager;
+use App\Filament\Clusters\General\GeneralCluster;
+use App\Filament\Clusters\HumanResources\HumanResourcesCluster;
+use App\Filament\Resources\EmployeeTimesheets\Schemas\EmployeeTimesheetForm;
+use App\Filament\Resources\EmployeeTimesheets\Schemas\EmployeeTimesheetInfolist;
+use App\Filament\Resources\EmployeeTimesheets\Tables\EmployeeTimesheetsTable;
 use App\Models\EmployeeTimesheet;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Tables\Table;
-use App\Filament\Resources\EmployeeTimesheets\Pages;
-use App\Filament\Resources\EmployeeTimesheets\Schemas\EmployeeTimesheetForm;
-use App\Filament\Resources\EmployeeTimesheets\Schemas\EmployeeTimesheetInfolist;
-use App\Filament\Resources\EmployeeTimesheets\Tables\EmployeeTimesheetsTable;
-use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\SoftDeletingScope;
-use Illuminate\Auth\Access\Response;
-use Illuminate\Database\Eloquent\Model;
 use Hexters\HexaLite\HasHexaLite;
-use App\Filament\Clusters\HumanResources\HumanResourcesCluster;
-use AlizHarb\ActivityLog\RelationManagers\ActivitiesRelationManager;
+use Illuminate\Auth\Access\Response;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletingScope;
 use UnitEnum;
-use App\Filament\Clusters\General\GeneralCluster;
+
 class EmployeeTimesheetResource extends Resource
 {
     protected static ?int $navigationSort = 12;
+
     protected static ?string $cluster = GeneralCluster::class;
+
     protected static string|UnitEnum|null $navigationGroup = 'Human Resources';
+
     use HasHexaLite;
 
     protected static ?string $model = EmployeeTimesheet::class;
 
     protected static ?string $recordTitleAttribute = 'title';
-    //protected static ?string $cluster = HumanResourcesCluster::class;
+    // protected static ?string $cluster = HumanResourcesCluster::class;
 
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-rectangle-stack';
+
     public function defineGates(): array
     {
-        return [ActivitiesRelationManager::class, 'employee_timesheet.index' => __('Allows viewing the employee timesheet list'), 'employee_timesheet.create' => __('Allows creating a new employee timesheet'), 'employee_timesheet.update' => __('Allows updating employee timesheets'), 'employee_timesheet.delete' => __('Allows deleting employee timesheets')];
+        return [ActivitiesRelationManager::class, 'employee_timesheet.index' => __('Allows viewing the employee timesheet list'), 'employee_timesheet.create' => __('Allows creating a new employee timesheet'), 'employee_timesheet.update' => __('Allows updating employee timesheets'), 'employee_timesheet.delete' => __('Allows deleting employee timesheets'), 'employee_timesheet.approve' => __('Allows approving or rejecting timesheets for payroll eligibility')];
     }
 
     public static function form(Schema $schema): Schema
@@ -65,7 +69,7 @@ class EmployeeTimesheetResource extends Resource
             'index' => Pages\ListEmployeeTimesheets::route('/'),
             'create' => Pages\CreateEmployeeTimesheet::route('/create'),
             'edit' => Pages\EditEmployeeTimesheet::route('/{record}/edit'),
-            'view' => Pages\ViewEmployeeTimesheet::route('/{record}')
+            'view' => Pages\ViewEmployeeTimesheet::route('/{record}'),
         ];
     }
 
@@ -81,12 +85,16 @@ class EmployeeTimesheetResource extends Resource
 
     public static function getEditAuthorizationResponse(Model $record): Response
     {
+        if (! $record instanceof EmployeeTimesheet || $record->approval_status !== EmployeeTimesheet::APPROVAL_PENDING) {
+            return Response::deny('Only pending timesheets can be edited. Reviewed timesheets are immutable.');
+        }
+
         return hexa()->can('employee_timesheet.update') ? Response::allow() : Response::deny(__('You do not have permission to edit this.'));
     }
 
     public static function getDeleteAuthorizationResponse(Model $record): Response
     {
-        return hexa()->can('employee_timesheet.delete') ? Response::allow() : Response::deny(__('You do not have permission to delete a employee timesheet.'));
+        return $record instanceof EmployeeTimesheet && $record->approval_status === EmployeeTimesheet::APPROVAL_PENDING && hexa()->can('employee_timesheet.delete') ? Response::allow() : Response::deny('Only pending timesheets can be deleted.');
     }
 
     public static function getDeleteAnyAuthorizationResponse(): Response
