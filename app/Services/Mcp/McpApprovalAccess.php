@@ -24,6 +24,11 @@ final class McpApprovalAccess
         return $actor !== null && $this->hasPermission($actor, 'mcp_execution_audit.index');
     }
 
+    public function canManageRetention(?User $actor): bool
+    {
+        return $actor !== null && $this->hasPermission($actor, 'mcp_execution_audit.retention_manage');
+    }
+
     private function hasPermission(User $actor, string $permission): bool
     {
         $configuredPrincipal = trim((string) config('mcp.ai_principal_email', ''));

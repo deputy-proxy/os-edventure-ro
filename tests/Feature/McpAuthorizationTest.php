@@ -13,6 +13,7 @@ use App\Mcp\Authorization\Scopes\McpOwnedRecordScope;
 use App\Mcp\Authorization\Scopes\McpTaskRecordScope;
 use App\Models\Mcp\McpApproval;
 use App\Models\User;
+use App\Services\Mcp\McpApprovalAccess;
 use App\Services\Mcp\McpApprovalService;
 use Hexters\HexaLite\Models\HexaRole;
 use Illuminate\Auth\Access\AuthorizationException;
@@ -449,6 +450,25 @@ class McpAuthorizationTest extends TestCase
         app(CaptureMcpAuditContext::class)->handle($request, static fn () => response()->noContent());
 
         $this->assertSame($clientId, $request->attributes->get('oauth_client_id'));
+    }
+
+    public function test_mcp_audit_access_and_retention_hold_management_require_separate_explicit_permissions(): void
+    {
+        $actor = $this->principalWithPermissions(['system' => ['mcp_execution_audit.index']], 'Audit Viewer', 'audit-viewer@example.test');
+
+        $access = app(McpApprovalAccess::class);
+
+        $this->assertTrue($access->canViewExecutionAudit($actor));
+        $this->assertFalse($access->canManageRetention($actor));
+
+        $manager = $this->principalWithPermissions(['system' => [
+            'mcp_execution_audit.index',
+            'mcp_execution_audit.retention_manage',
+        ]], 'Retention Manager', 'retention-manager@example.test');
+
+        $this->assertTrue($access->canViewExecutionAudit($manager));
+        $this->assertTrue($access->canManageRetention($manager));
+        $this->assertFalse($access->canManageRetention(null));
     }
 
     public function test_permission_matrix_requires_human_approval_for_write_tools(): void

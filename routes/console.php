@@ -48,3 +48,8 @@ Schedule::command('mcp:expire-approvals')
     ->everyMinute()
     ->timezone(config('app.timezone'))
     ->withoutOverlapping();
+
+Schedule::command('mcp:prune-history')
+    ->dailyAt('02:30')
+    ->timezone(config('app.timezone'))
+    ->withoutOverlapping();
