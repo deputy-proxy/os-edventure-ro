@@ -3,11 +3,15 @@
 namespace App\Filament\Resources\EmployeePaySlips\Pages;
 
 use App\Filament\Resources\EmployeePaySlips\EmployeePaySlipResource;
+use App\Models\Employee;
 use App\Models\EmployeeContract;
 use App\Models\EmployeePaySlip;
 use App\Services\EmployeePaySlipService;
+use App\Services\Payroll\GrossPayrollCalculator;
 use Carbon\CarbonImmutable;
 use Filament\Resources\Pages\CreateRecord;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 class CreateEmployeePaySlip extends CreateRecord
@@ -35,6 +39,12 @@ class CreateEmployeePaySlip extends CreateRecord
             throw ValidationException::withMessages(['employee_id' => 'The employee must have a contract overlapping the selected pay month.']);
         }
 
+        $employee = Employee::query()->findOrFail($data['employee_id']);
+        $calculation = app(GrossPayrollCalculator::class)->calculate($employee, $month);
+        if ($calculation['blocking_errors'] !== []) {
+            throw ValidationException::withMessages(['month' => $calculation['blocking_errors']]);
+        }
+
         $data['month'] = $month->toDateString();
         $data['status'] = 'Open';
         $data['paid_on'] = null;
@@ -42,8 +52,15 @@ class CreateEmployeePaySlip extends CreateRecord
         return $data;
     }
 
-    protected function afterCreate(): void
+    protected function handleRecordCreation(array $data): Model
     {
-        app(EmployeePaySlipService::class)->populateAutomaticItems($this->record);
+        return DB::transaction(function () use ($data): EmployeePaySlip {
+            $data['items'] ??= [];
+            $data['manual_amount'] ??= 0;
+            $paySlip = EmployeePaySlip::query()->create($data);
+            app(EmployeePaySlipService::class)->calculateGrossCompensation($paySlip);
+
+            return $paySlip;
+        });
     }
 }

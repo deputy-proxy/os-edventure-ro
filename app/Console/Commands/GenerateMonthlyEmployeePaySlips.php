@@ -11,7 +11,7 @@ class GenerateMonthlyEmployeePaySlips extends Command
 {
     protected $signature = 'employee-payslips:generate {--month= : Calendar month in YYYY-MM format; defaults to the current month}';
 
-    protected $description = 'Create idempotent monthly employee payslips and add approved holiday/reimbursement items.';
+    protected $description = 'Create idempotent monthly gross-compensation payslips from contracts and approved timesheets.';
 
     public function handle(EmployeePaySlipService $service): int
     {
@@ -37,7 +37,7 @@ class GenerateMonthlyEmployeePaySlips extends Command
         }
 
         $created = $service->generateForMonth($month);
-        $this->info(sprintf('Created %d payslip(s) for %s. Existing payslips were left unchanged except for missing automatic items on Open slips.', $created, $month->format('Y-m')));
+        $this->info(sprintf('Created %d gross-compensation payslip(s) for %s. Existing calculated drafts were left unchanged.', $created, $month->format('Y-m')));
 
         return self::SUCCESS;
     }

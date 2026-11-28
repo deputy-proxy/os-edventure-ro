@@ -2,7 +2,7 @@
 
 namespace App\Filament\Resources\TestSimulations\Tables;
 
-use App\Filament\Resources\EmployeePaySlips\Actions\AddToPaySlipAction;
+use App\Filament\Resources\EmployeeTimesheets\Actions\CreateEmployeeTimesheetAction;
 use App\Filament\Resources\Tasks\Actions\TasksAction;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
@@ -30,7 +30,7 @@ class TestSimulationsTable
             ->recordActions([
                 EditAction::make(),
                 DeleteAction::make(),
-                AddToPaySlipAction::make(),
+                CreateEmployeeTimesheetAction::make(),
                 TasksAction::make(),
                 CommentsAction::make(),
             ])

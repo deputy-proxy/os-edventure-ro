@@ -20,7 +20,7 @@ class PayrollPeriodExportController
         $actor = $request->user();
         abort_unless($actor instanceof User, 401);
         $runId = $request->integer('run');
-        abort_unless($runId > 0, 422, 'A calculation run ID is required.');
+        abort_unless($runId > 0, 422, 'An approved calculation version is required.');
 
         $export = $service->export($actor, $paySlip, $runId, $type, $format);
 

@@ -109,18 +109,6 @@ parameters:
 			path: app/Filament/Resources/EmployeeMedicalLeaves/Schemas/EmployeeMedicalLeaveForm.php
 
 		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$status\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Filament/Resources/EmployeePaySlips/Actions/AddToPaySlipAction.php
-
-		-
-			message: '#^Unsafe call to private method App\\Filament\\Resources\\EmployeePaySlips\\Actions\\AddToPaySlipAction\:\:supports\(\) through static\:\:\.$#'
-			identifier: staticClassAccess.privateMethod
-			count: 1
-			path: app/Filament/Resources/EmployeePaySlips/Actions/AddToPaySlipAction.php
-
-		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$month\.$#'
 			identifier: property.notFound
 			count: 1
@@ -128,12 +116,6 @@ parameters:
 
 
 
-
-		-
-			message: '#^Parameter \#1 \$paySlip of method App\\Services\\EmployeePaySlipService\:\:populateAutomaticItems\(\) expects App\\Models\\EmployeePaySlip, Illuminate\\Database\\Eloquent\\Model\|null given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Filament/Resources/EmployeePaySlips/Pages/CreateEmployeePaySlip.php
 
 		-
 			message: '#^Method App\\Filament\\Resources\\Employees\\EmployeeResource\:\:getNavigationBadge\(\) should return string\|null but returns int\<0, max\>\.$#'
@@ -1041,12 +1023,6 @@ parameters:
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$title\.$#'
 			identifier: property.notFound
 			count: 3
-			path: app/Services/EmployeePaySlipService.php
-
-		-
-			message: '#^Negated boolean expression is always false\.$#'
-			identifier: booleanNot.alwaysFalse
-			count: 1
 			path: app/Services/EmployeePaySlipService.php
 
 		-

@@ -36,8 +36,12 @@ class EmployeePaySlip extends Model
             'approved_snapshot' => 'array',
             'closed_at' => 'immutable_datetime',
             'lifecycle_version' => 'integer',
+            'active_calculation_version' => 'integer',
+            'gross_calculation_history' => 'array',
         ];
     }
+
+    private bool $grossCalculationTransitionAllowed = false;
 
     protected static function booted(): void
     {
@@ -56,6 +60,9 @@ class EmployeePaySlip extends Model
                 }
                 if ($paySlip->approval_status !== 'draft') {
                     throw ValidationException::withMessages(['approval_status' => 'New payslips must start in draft approval state.']);
+                }
+                if ((int) ($paySlip->active_calculation_version ?? 0) !== 0 || ! empty($paySlip->gross_calculation_history)) {
+                    throw ValidationException::withMessages(['active_calculation_version' => 'New payslips must start without a calculation version.']);
                 }
             } else {
                 if ($paySlip->isDirty(['employee_id', 'month'])) {
@@ -119,7 +126,11 @@ class EmployeePaySlip extends Model
                     throw ValidationException::withMessages(['status' => 'A paid payslip is locked. Record a correction as an adjustment on a later open payslip.']);
                 }
 
-                if (($previousStatus !== 'Open' || $paySlip->approval_status !== 'draft') && $paySlip->isDirty(['manual_amount', 'items', 'amount', 'due_on'])) {
+                if ($paySlip->isDirty(['active_calculation_version', 'gross_calculation_history']) && ! $paySlip->grossCalculationTransitionAllowed) {
+                    throw ValidationException::withMessages(['gross_calculation_history' => 'Gross calculation versions can only be appended through the gross payroll service.']);
+                }
+
+                if (($previousStatus !== 'Open' || $paySlip->approval_status !== 'draft') && $paySlip->isDirty(['manual_amount', 'items', 'amount', 'due_on', 'active_calculation_version', 'gross_calculation_history'])) {
                     throw ValidationException::withMessages(['status' => 'A reviewed, approved, closed, or paid payslip is locked. Use the documented correction workflow.']);
                 }
             }
@@ -132,17 +143,44 @@ class EmployeePaySlip extends Model
                 throw ValidationException::withMessages(['paid_on' => 'A payment date can only be set when the payslip is Paid.']);
             }
 
-            if ($paySlip->isDirty('manual_amount') || ! $paySlip->exists) {
+            if ($paySlip->isDirty(['manual_amount', 'active_calculation_version']) || ! $paySlip->exists) {
                 $lineTotal = $paySlip->exists ? (float) $paySlip->lineItems()->sum('amount') : 0.0;
                 $paySlip->amount = round((float) ($paySlip->manual_amount ?? 0) + $lineTotal, 2, PHP_ROUND_HALF_UP);
             }
         });
 
         static::deleting(function (EmployeePaySlip $paySlip): void {
-            if (! $paySlip->isOpen() || $paySlip->approval_status !== 'draft' || $paySlip->lineItems()->exists()) {
+            if (! $paySlip->isOpen() || $paySlip->approval_status !== 'draft' || (int) $paySlip->active_calculation_version > 0 || $paySlip->allLineItems()->exists()) {
                 throw ValidationException::withMessages(['status' => 'Payslips with source items or a locked status cannot be deleted.']);
             }
         });
+    }
+
+    /** Append an immutable calculation summary and activate its line-item version. */
+    public function activateGrossCalculationVersion(int $version, array $snapshot): void
+    {
+        if (! $this->isOpen() || $version !== ((int) $this->active_calculation_version + 1)) {
+            throw ValidationException::withMessages(['active_calculation_version' => 'A new gross calculation version can only be appended to an open draft in sequence.']);
+        }
+
+        $history = $this->gross_calculation_history ?? [];
+        $lineTotal = (float) EmployeePaySlipItem::query()
+            ->where('employee_pay_slip_id', $this->getKey())
+            ->where('calculation_version', $version)
+            ->sum('amount');
+        if (! isset($snapshot['gross_total']) || round((float) $snapshot['gross_total'], 2, PHP_ROUND_HALF_UP) !== round($lineTotal, 2, PHP_ROUND_HALF_UP)) {
+            throw ValidationException::withMessages(['gross_calculation_history' => 'The gross calculation summary does not match the immutable line items for this version.']);
+        }
+        $snapshot['calculation_version'] = $version;
+        $this->grossCalculationTransitionAllowed = true;
+        try {
+            $this->forceFill([
+                'active_calculation_version' => $version,
+                'gross_calculation_history' => [...$history, $snapshot],
+            ])->save();
+        } finally {
+            $this->grossCalculationTransitionAllowed = false;
+        }
     }
 
     public function employee(): BelongsTo
@@ -152,6 +190,13 @@ class EmployeePaySlip extends Model
 
     /** @return HasMany<EmployeePaySlipItem, $this> */
     public function lineItems(): HasMany
+    {
+        return $this->hasMany(EmployeePaySlipItem::class, 'employee_pay_slip_id')
+            ->where('calculation_version', (int) ($this->active_calculation_version ?? 0));
+    }
+
+    /** @return HasMany<EmployeePaySlipItem, $this> */
+    public function allLineItems(): HasMany
     {
         return $this->hasMany(EmployeePaySlipItem::class, 'employee_pay_slip_id');
     }

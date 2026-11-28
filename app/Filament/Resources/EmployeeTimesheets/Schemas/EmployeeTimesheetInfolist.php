@@ -2,24 +2,28 @@
 
 namespace App\Filament\Resources\EmployeeTimesheets\Schemas;
 
-use Filament\Infolists;
+use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Schema;
+
 class EmployeeTimesheetInfolist
 {
     public static function configure(Schema $schema): Schema
     {
         return $schema
             ->components([
-                \Filament\Infolists\Components\TextEntry::make('employee_id'),
-                \Filament\Infolists\Components\TextEntry::make('date')
+                TextEntry::make('employee_id'),
+                TextEntry::make('date')
                     ->dateTime(),
-                \Filament\Infolists\Components\TextEntry::make('time_start')
+                TextEntry::make('time_start')
                     ->dateTime(),
-                \Filament\Infolists\Components\TextEntry::make('time_end')
+                TextEntry::make('time_end')
                     ->dateTime(),
-                \Filament\Infolists\Components\TextEntry::make('category'),
-                \Filament\Infolists\Components\TextEntry::make('number_of_hours'),
-                \Filament\Infolists\Components\TextEntry::make('session.identifier')
+                TextEntry::make('category'),
+                TextEntry::make('number_of_hours'),
+                TextEntry::make('approval_status'),
+                TextEntry::make('reviewer.name'),
+                TextEntry::make('reviewed_at')->dateTime(),
+                TextEntry::make('session.identifier'),
             ]);
     }
 }

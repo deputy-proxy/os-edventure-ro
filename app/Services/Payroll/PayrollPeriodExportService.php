@@ -38,6 +38,11 @@ class PayrollPeriodExportService
             throw ValidationException::withMessages(['employee_pay_slip_id' => 'Payroll exports are available only from an approved, locked period with an immutable approval snapshot.']);
         }
 
+        $grossSnapshot = $approvedSnapshot['gross_calculation'] ?? null;
+        if (is_array($grossSnapshot)) {
+            return $this->exportGross($actor, $period, $approvedSnapshot, $grossSnapshot, $runId, $type, $format);
+        }
+
         $approvedRuns = (array) ($approvedSnapshot['calculation_runs'] ?? []);
         $runSnapshot = collect($approvedRuns)->first(static fn ($snapshot): bool => is_array($snapshot) && (int) ($snapshot['id'] ?? 0) === $runId);
         if (! is_array($runSnapshot)) {
@@ -159,6 +164,141 @@ class PayrollPeriodExportService
                 'payroll_calculation_run_id' => $run->getKey(),
                 'actor_id' => $actor->getKey(),
                 'report_type' => 'internal_payroll_'.$type,
+                'format' => $format,
+                'row_count' => $rowCount,
+                'approved_snapshot_hash' => $lockedPeriod->approved_snapshot_hash,
+                'content_sha256' => $contentHash,
+                'created_at' => now(),
+            ]);
+        });
+
+        return [
+            'content' => $content,
+            'filename' => $filename,
+            'media_type' => $format === 'csv' ? 'text/csv; charset=UTF-8' : 'application/json; charset=UTF-8',
+            'row_count' => $rowCount,
+            'content_sha256' => $contentHash,
+        ];
+    }
+
+    /** @return array{content: string, filename: string, media_type: string, row_count: int, content_sha256: string} */
+    private function exportGross(User $actor, EmployeePaySlip $period, array $approvedSnapshot, array $grossSnapshot, int $version, string $type, string $format): array
+    {
+        $approvedVersion = (int) ($grossSnapshot['version'] ?? 0);
+        if ($approvedVersion <= 0 || $version !== $approvedVersion
+            || (int) $period->active_calculation_version !== $approvedVersion
+            || (string) ($grossSnapshot['gross_total'] ?? '') !== (string) $period->amount) {
+            throw ValidationException::withMessages(['gross_calculation_version' => 'The selected gross calculation version is not part of the immutable approved snapshot.']);
+        }
+
+        $sourceItems = $approvedSnapshot['employee_pay_slip']['source_items'] ?? null;
+        if (! is_array($sourceItems)) {
+            throw ValidationException::withMessages(['source_items' => 'The approved gross calculation is missing its source-linked line items.']);
+        }
+
+        $lineItems = [];
+        foreach ($sourceItems as $index => $item) {
+            if (! is_array($item) || (int) ($item['calculation_version'] ?? 0) !== $approvedVersion
+                || ! isset($item['id'], $item['source_type'], $item['source_id'], $item['occurred_on'], $item['description'], $item['quantity'], $item['unit'], $item['unit_rate'], $item['amount'])
+                || ! is_numeric($item['amount']) || ! is_numeric($item['quantity']) || ! is_numeric($item['unit_rate'])
+                || ($item['currency'] ?? null) !== 'RON') {
+                throw ValidationException::withMessages(['source_items' => 'An approved gross line is missing a required field or does not match the calculation version.']);
+            }
+
+            $lineItems[] = [
+                'line_number' => $index + 1,
+                'item_type' => (string) $item['item_type'],
+                'source_type' => (string) $item['source_type'],
+                'source_id' => (int) $item['source_id'],
+                'occurred_on' => (string) $item['occurred_on'],
+                'description' => (string) $item['description'],
+                'quantity' => (string) $item['quantity'],
+                'unit' => (string) $item['unit'],
+                'unit_rate' => (string) $item['unit_rate'],
+                'amount' => (string) $item['amount'],
+                'currency_code' => 'RON',
+                'calculation_snapshot_json' => json_encode($item['calculation_snapshot'] ?? [], JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+            ];
+        }
+
+        $periodStart = Carbon::parse((string) $period->month)->startOfMonth()->toDateString();
+        $periodEnd = Carbon::parse((string) $period->month)->endOfMonth()->toDateString();
+        $metadata = [
+            'schema_version' => 'internal-payroll-export-v1',
+            'report_type' => 'internal_payroll_gross_'.$type,
+            'employee_pay_slip_id' => (int) $period->getKey(),
+            'employee_id' => (int) $period->employee_id,
+            'period_start' => $periodStart,
+            'period_end' => $periodEnd,
+            'gross_calculation_version' => $approvedVersion,
+            'formula_version' => (string) ($grossSnapshot['formula_version'] ?? 'gross-v1'),
+            'currency_code' => 'RON',
+            'gross_amount' => (string) $grossSnapshot['gross_total'],
+            'calculation_history' => $grossSnapshot['calculation_history'] ?? [],
+            'active_calculation_snapshot' => $grossSnapshot['active_calculation_snapshot'] ?? [],
+            'approval_status' => (string) $period->approval_status,
+            'approved_by' => $period->approved_by ? (int) $period->approved_by : null,
+            'approved_snapshot_sha256' => (string) $period->approved_snapshot_hash,
+            'approved_at' => Carbon::parse((string) $period->approved_at)->toIso8601String(),
+            'closed_by' => $period->closed_by ? (int) $period->closed_by : null,
+            'closed_at' => $period->closed_at ? Carbon::parse((string) $period->closed_at)->toIso8601String() : null,
+        ];
+        $summary = [
+            'currency_code' => 'RON',
+            'gross_amount' => (string) $grossSnapshot['gross_total'],
+            'calculation_version' => $approvedVersion,
+            'formula_version' => (string) ($grossSnapshot['formula_version'] ?? 'gross-v1'),
+            'line_count' => count($lineItems),
+            'rounding' => (string) ($grossSnapshot['rounding'] ?? ''),
+        ];
+        $calculationContext = (array) ($grossSnapshot['active_calculation_snapshot'] ?? []);
+        $exceptions = array_map(static fn (string $warning): array => [
+            'code' => 'gross_calculation_warning',
+            'severity' => 'warning',
+            'message' => $warning,
+        ], (array) ($calculationContext['warnings'] ?? []));
+        $medicalConflicts = (array) ($calculationContext['medical_leave_date_conflicts'] ?? []);
+        if (($medicalConflicts['has_overlap'] ?? false) === true) {
+            $exceptions[] = [
+                'code' => 'medical_leave_date_conflict',
+                'severity' => 'warning',
+                'message' => 'Medical leave dates overlap the pay period. Manual review is required; no benefit or deduction was calculated.',
+                'overlapping_date_ranges' => $medicalConflicts['overlapping_date_ranges'] ?? [],
+            ];
+        }
+        $payload = [
+            'metadata' => $metadata,
+            'summary' => $type === 'summary' ? $summary : null,
+            'line_items' => $type === 'line_items' ? $lineItems : null,
+            'exceptions' => $type === 'exceptions' ? $exceptions : null,
+        ];
+        $this->assertValidUtf8($payload);
+        $content = $format === 'json'
+            ? $this->jsonContent($payload)
+            : $this->csvContent($type, $metadata, $type === 'summary' ? $summary : null, $lineItems, $exceptions);
+        $contentHash = hash('sha256', $content);
+        $rowCount = match ($type) {
+            'summary' => 1,
+            'line_items' => count($lineItems),
+            'exceptions' => count($exceptions),
+            default => throw ValidationException::withMessages(['type' => 'Unsupported payroll export type.']),
+        };
+        $filename = sprintf('payroll-%s-employee-%d-%s-gross-v%d.%s', $type, (int) $period->employee_id, Carbon::parse((string) $period->month)->format('Y-m'), $approvedVersion, $format);
+
+        DB::transaction(function () use ($actor, $period, $approvedVersion, $type, $format, $rowCount, $contentHash): void {
+            $lockedPeriod = EmployeePaySlip::query()->whereKey($period->getKey())->lockForUpdate()->firstOrFail();
+            if (! in_array($lockedPeriod->approval_status, ['approved', 'closed'], true)
+                || (int) $lockedPeriod->active_calculation_version !== $approvedVersion
+                || ! hash_equals((string) $period->approved_snapshot_hash, (string) $lockedPeriod->approved_snapshot_hash)) {
+                throw ValidationException::withMessages(['employee_pay_slip_id' => 'The approved gross payroll snapshot changed while preparing the export.']);
+            }
+
+            PayrollExportEvent::query()->create([
+                'employee_pay_slip_id' => $lockedPeriod->getKey(),
+                'payroll_calculation_run_id' => null,
+                'gross_calculation_version' => $approvedVersion,
+                'actor_id' => $actor->getKey(),
+                'report_type' => 'internal_payroll_gross_'.$type,
                 'format' => $format,
                 'row_count' => $rowCount,
                 'approved_snapshot_hash' => $lockedPeriod->approved_snapshot_hash,

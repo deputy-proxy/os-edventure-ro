@@ -2,7 +2,7 @@
 
 namespace App\Filament\Resources\Sessions\Tables;
 
-use App\Filament\Resources\EmployeePaySlips\Actions\AddToPaySlipAction;
+use App\Filament\Resources\EmployeeTimesheets\Actions\CreateEmployeeTimesheetAction;
 use App\Filament\Resources\Sessions\Actions\InputSessionAttendanceAction;
 use App\Filament\Resources\Sessions\Actions\ProvideSessionFeedbackAction;
 use App\Filament\Resources\Tasks\Actions\TasksAction;
@@ -37,7 +37,7 @@ class SessionsTable
                 TasksAction::make(),
                 InputSessionAttendanceAction::make(),
                 ProvideSessionFeedbackAction::make()->visible(fn (Session $record): bool => $record->session_type === Session::TYPE_GROUP && ProvideSessionFeedbackAction::canManage($record)),
-                AddToPaySlipAction::make(),
+                CreateEmployeeTimesheetAction::make(),
                 CommentsAction::make(),
             ])->toolbarActions([BulkActionGroup::make([RestoreBulkAction::make()])]);
     }

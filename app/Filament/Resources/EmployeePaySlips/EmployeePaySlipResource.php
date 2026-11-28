@@ -95,7 +95,7 @@ class EmployeePaySlipResource extends Resource
 
     public function defineGates(): array
     {
-        return ['employee_pay_slip.index' => __('Allows viewing the employee pay slip list'), 'employee_pay_slip.create' => __('Allows creating a new employee pay slip'), 'employee_pay_slip.update' => __('Allows updating employee pay slips'), 'employee_pay_slip.delete' => __('Allows deleting employee pay slips'), 'payroll_calculation_run.create' => __('Allows recording immutable payroll calculation input and result snapshots'), 'payroll_period.review' => __('Allows submitting a payroll period for review'), 'payroll_period.approve' => __('Allows approving a reviewed payroll period'), 'payroll_period.close' => __('Allows closing an approved payroll period'), 'payroll_period.correct' => __('Allows recording a correction against a closed payroll period'), 'payroll_period.export' => __('Allows exporting approved internal payroll reports')];
+        return ['employee_pay_slip.index' => __('Allows viewing the employee pay slip list'), 'employee_pay_slip.create' => __('Allows creating a new employee pay slip'), 'employee_pay_slip.update' => __('Allows updating employee pay slips'), 'employee_pay_slip.delete' => __('Allows deleting employee pay slips'), 'payroll_period.review' => __('Allows submitting a payroll period for review'), 'payroll_period.approve' => __('Allows approving a reviewed payroll period'), 'payroll_period.close' => __('Allows closing an approved payroll period'), 'payroll_period.correct' => __('Allows recording a correction against a closed payroll period'), 'payroll_period.export' => __('Allows exporting approved internal payroll reports')];
     }
 
     public static function getViewAnyAuthorizationResponse(): Response
@@ -119,7 +119,7 @@ class EmployeePaySlipResource extends Resource
 
     public static function getDeleteAuthorizationResponse(Model $record): Response
     {
-        if (! $record instanceof EmployeePaySlip || ! $record->isOpen() || $record->approval_status !== 'draft' || $record->lineItems()->exists()) {
+        if (! $record instanceof EmployeePaySlip || ! $record->isOpen() || $record->approval_status !== 'draft' || (int) $record->active_calculation_version > 0 || $record->allLineItems()->exists()) {
             return Response::deny('Payslips with source items or a locked status cannot be deleted.');
         }
 

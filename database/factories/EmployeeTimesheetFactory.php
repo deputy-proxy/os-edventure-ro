@@ -2,10 +2,9 @@
 
 namespace Database\Factories;
 
+use App\Models\Employee;
 use App\Models\EmployeeTimesheet;
 use Illuminate\Database\Eloquent\Factories\Factory;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
 
 class EmployeeTimesheetFactory extends Factory
 {
@@ -15,6 +14,7 @@ class EmployeeTimesheetFactory extends Factory
      * @var class-string<EmployeeTimesheet>
      */
     protected $model = EmployeeTimesheet::class;
+
     /**
      * Define the model's default state.
      *
@@ -23,13 +23,14 @@ class EmployeeTimesheetFactory extends Factory
     public function definition(): array
     {
         return [
-            'employee_id' => \App\Models\Employee::factory(),
+            'employee_id' => Employee::factory(),
             'date' => $this->faker->date(),
             'time_start' => $this->faker->dateTime(),
             'time_end' => $this->faker->dateTime(),
             'category' => $this->faker->word(),
-            'number_of_hours' => $this->faker->randomNumber(),
-            'session_id' => \App\Models\Session::factory(),
+            'number_of_hours' => $this->faker->randomFloat(2, 0.5, 8),
+            'session_id' => null,
+            'approval_status' => EmployeeTimesheet::APPROVAL_PENDING,
         ];
     }
 }
