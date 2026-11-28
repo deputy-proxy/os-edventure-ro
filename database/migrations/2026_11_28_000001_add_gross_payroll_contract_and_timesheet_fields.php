@@ -32,6 +32,13 @@ return new class extends Migration
             $table->unsignedInteger('active_calculation_version')->default(0)->after('manual_amount');
         });
 
+        // Keep a dedicated child-column index for the employee_pay_slip_id foreign key.
+        // MySQL/MariaDB cannot drop the old composite unique index while it is the
+        // only index beginning with employee_pay_slip_id.
+        Schema::table('employee_pay_slip_items', function (Blueprint $table): void {
+            $table->index('employee_pay_slip_id', 'employee_pay_slip_items_payslip_idx');
+        });
+
         Schema::table('employee_pay_slip_items', function (Blueprint $table): void {
             $table->dropUnique('employee_pay_slip_items_source_unique');
             $table->unsignedInteger('calculation_version')->default(0)->after('employee_pay_slip_id')->index();
@@ -61,6 +68,10 @@ return new class extends Migration
             Schema::table('employee_pay_slip_items', function (Blueprint $table): void {
                 $table->dropColumn('calculation_version');
                 $table->unique(['employee_pay_slip_id', 'source_type', 'source_id'], 'employee_pay_slip_items_source_unique');
+            });
+
+            Schema::table('employee_pay_slip_items', function (Blueprint $table): void {
+                $table->dropIndex('employee_pay_slip_items_payslip_idx');
             });
         }
 
